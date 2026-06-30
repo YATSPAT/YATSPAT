@@ -320,6 +320,22 @@ export default function Home() {
             </p>
 
             <div className="text-left space-y-4">
+              {/* Keypair setup */}
+              <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                <p className="text-xs font-semibold text-amber-300 mb-2">🔑 Execution Keypair (required for live trading)</p>
+                <p className="text-xs text-slate-400 mb-2">
+                  Save your creator wallet keypair so the cron job can sign swaps, burns, and transfers:
+                </p>
+                <div className="space-y-1 text-xs font-mono text-slate-500">
+                  <p>Option 1: <code className="text-amber-300">export SOLANA_CREATOR_KEYPAIR='[1,2,3,...]'</code></p>
+                  <p>Option 2: <code className="text-amber-300">export SOLANA_CREATOR_KEYPAIR='&lt;base58&gt;'</code></p>
+                  <p>Option 3: <code className="text-amber-300">cat keypair.json &gt; ~/.hermes/scripts/creator-keypair.json</code></p>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  Without a keypair, the poller reports what <em>would</em> happen. With one, it executes automatically.
+                </p>
+              </div>
+
               <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30">
                 <p className="text-xs font-semibold text-slate-300 mb-2">📋 Job Config</p>
                 <pre className="bg-surface-950 border border-slate-700/50 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all max-h-64">{generatedSnippet}</pre>
