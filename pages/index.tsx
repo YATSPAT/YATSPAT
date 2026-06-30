@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
+import { useJupiterSwap } from "../hooks/useJupiterSwap";
+import { useBurnToken } from "../hooks/useBurnToken";
 
 /* ------------------------------------------------------------------ */
 /*  TypeScript types                                                  */
@@ -20,19 +22,27 @@ type Step = "snapshot" | "rewards" | "burn" | "distribute" | "done";
 export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut, siwsAddress } = useSiws();
+  const { quote: jupQuote, executeSwap, swapping, swapError, clearError: clearSwapError } = useJupiterSwap();
+  const { executeBurn: burnTokens, burning, burnError, clearError: clearBurnError } = useBurnToken();
 
   // ── Auto‑distribute state ──────────────────────────────────────────
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [autoWallet, setAutoWallet] = useState("");
-  const [autoRewardMint, setAutoRewardMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
   const [autoThreshold, setAutoThreshold] = useState(100);
   const [autoSaving, setAutoSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
   const [autoSnippet, setAutoSnippet] = useState("");
 
-  // ── Multi‑token swap state ─────────────────────────────────────────
+  // ── Multi‑token swap state
   const [burnTokenMint, setBurnTokenMint] = useState("");
   const [distTokenMint, setDistTokenMint] = useState("");
+
+  // ── Swap execution state ────────────────────────────────────────────
+  const [burnQuote, setBurnQuote] = useState<{ outAmount: string; priceImpactPct: string } | null>(null);
+  const [distQuote, setDistQuote] = useState<{ outAmount: string; priceImpactPct: string } | null>(null);
+  const [burnTxid, setBurnTxid] = useState("");
+  const [distTxid, setDistTxid] = useState("");
+  const [swapsExecuted, setSwapsExecuted] = useState(false);
 
   /* ---------- state ---------- */
   const [step, setStep] = useState<Step>("snapshot");
@@ -45,6 +55,7 @@ export default function Home() {
   // Rewards
   const [rewardAmount, setRewardAmount] = useState(1000);
   const [extraFeePercent, setExtraFeePercent] = useState(1);
+  const [rewardMint, setRewardMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
   const [rewardsCollected, setRewardsCollected] = useState(false);
 
   // Burn / Split
@@ -118,9 +129,80 @@ export default function Home() {
     setStep("burn");
   };
 
-  const executeBurn = () => {
+  const refreshQuotes = async () => {
+    if (!burnTokenMint.trim() && !distTokenMint.trim()) return;
+    const rewardDecimals = 6; // assume for quote display
+    const afterFeeRaw = Math.floor(afterFee * 10 ** rewardDecimals);
+
+    if (burnTokenMint.trim() && splitPercent > 0) {
+      const q = await jupQuote(
+        rewardMint,
+        burnTokenMint.trim(),
+        String(Math.floor(afterFeeRaw * splitPercent / 100))
+      );
+      if (q) setBurnQuote({ outAmount: q.outAmount, priceImpactPct: q.priceImpactPct });
+    }
+    if (distTokenMint.trim() && splitPercent < 100) {
+      const q = await jupQuote(
+        rewardMint,
+        distTokenMint.trim(),
+        String(Math.floor(afterFeeRaw * (100 - splitPercent) / 100))
+      );
+      if (q) setDistQuote({ outAmount: q.outAmount, priceImpactPct: q.priceImpactPct });
+    }
+  };
+
+  // Auto-refresh quotes when split or mints change
+  useEffect(() => {
+    if (burnComplete && connected) refreshQuotes();
+  }, [burnComplete, splitPercent, burnTokenMint, distTokenMint, connected]);
+
+  const executeSwaps = async () => {
+    if (!connected) {
+      setError("Connect your wallet first");
+      return;
+    }
+    clearSwapError();
+    clearBurnError();
+    setError("");
+
+    const rewardDecimals = 6;
+
+    // Step 1: Swap burn pool → burn token
+    if (burnTokenMint.trim() && splitPercent > 0) {
+      const burnAmount = String(Math.floor(afterFee * splitPercent / 100 * 10 ** rewardDecimals));
+      const res = await executeSwap(rewardMint, burnTokenMint.trim(), burnAmount);
+      if (!res) return;
+      setBurnTxid(res.txid);
+
+      // Step 2: Burn the tokens we just received
+      if (burnQuote) {
+        const burnTokenDecimals = 6;
+        const outAmountUi = Number(res.outAmount) / 10 ** burnTokenDecimals;
+        await burnTokens(burnTokenMint.trim(), outAmountUi, burnTokenDecimals);
+      }
+    }
+
+    // Step 3: Swap dist pool → reward token
+    if (distTokenMint.trim() && splitPercent < 100) {
+      const distAmount = String(Math.floor(afterFee * (100 - splitPercent) / 100 * 10 ** rewardDecimals));
+      const res = await executeSwap(rewardMint, distTokenMint.trim(), distAmount);
+      if (!res) return;
+      setDistTxid(res.txid);
+    }
+
+    setSwapsExecuted(true);
     setBurnComplete(true);
     setStep("distribute");
+  };
+
+  const executeBurn = () => {
+    if (!connected) {
+      setError("Connect your wallet first to execute swaps");
+      return;
+    }
+    setBurnComplete(true);
+    // Quotes refresh via useEffect
   };
 
   const executeDistribution = () => {
@@ -135,7 +217,14 @@ export default function Home() {
     setBurnComplete(false);
     setDistributionDone(false);
     setSnapshotHolders([]);
+    setBurnQuote(null);
+    setDistQuote(null);
+    setBurnTxid("");
+    setDistTxid("");
+    setSwapsExecuted(false);
     setError("");
+    clearSwapError();
+    clearBurnError();
   };
 
   const saveAutoConfig = async () => {
@@ -146,7 +235,7 @@ export default function Home() {
         enabled: autoEnabled,
         label: `Auto Reflect — ${tokenAddress.slice(0, 8)}…`,
         monitor_wallet: autoWallet.trim(),
-        reward_mint: autoRewardMint.trim(),
+        reward_mint: rewardMint.trim(),
         target_mint: tokenAddress.trim(),
         threshold_ui: autoThreshold,
         reward_amount: rewardAmount,
@@ -349,6 +438,17 @@ export default function Home() {
               />
             </div>
           </div>
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Reward Token Mint
+            </label>
+            <input
+              className="glass-input font-mono text-sm"
+              value={rewardMint}
+              onChange={(e) => setRewardMint(e.target.value)}
+              placeholder="SPL mint of the reward token (e.g. USDC, SOL…)"
+            />
+          </div>
           <div className="mt-3 p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
             <div className="flex justify-between">
               <span>Collected</span>
@@ -384,87 +484,162 @@ export default function Home() {
           title="Swap & Burn"
           subtitle="Rewards are split: one portion buys your token and burns it, the rest buys a reward token for holders."
           active={step === "burn"}
-          done={burnComplete}
+          done={burnComplete && swapsExecuted}
           disabled={!rewardsCollected}
         >
-          <div className="space-y-4">
-            {/* Split slider */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Burn split:{" "}
-                <span className="text-rose-400 font-bold">{splitPercent}%</span>
-                {" "}to burn ·{" "}
-                <span className="text-emerald-400 font-bold">{100 - splitPercent}%</span>
-                {" "}to distribute
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={splitPercent}
-                onChange={(e) => setSplitPercent(Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
-                <span>0% burn</span><span>50/50</span><span>100% burn</span>
+          {!burnComplete ? (
+            <div className="space-y-4">
+              {/* Split slider */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Burn split:{" "}
+                  <span className="text-rose-400 font-bold">{splitPercent}%</span>
+                  {" "}to burn ·{" "}
+                  <span className="text-emerald-400 font-bold">{100 - splitPercent}%</span>
+                  {" "}to distribute
+                </label>
+                <input
+                  type="range"
+                  min={0} max={100} step={1}
+                  value={splitPercent}
+                  onChange={(e) => setSplitPercent(Number(e.target.value))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <span>0% burn</span><span>50/50</span><span>100% burn</span>
+                </div>
               </div>
-            </div>
 
-            {/* Burn token mint */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Your Token Mint (to burn)
-              </label>
-              <input
-                className="glass-input font-mono text-sm"
-                value={burnTokenMint}
-                onChange={(e) => setBurnTokenMint(e.target.value)}
-                placeholder="Mint of token to buy & burn…"
-              />
-              <p className="text-[10px] text-slate-500 mt-1">PumpFun reward tokens → Jupiter swap → your token → 🔥</p>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Your Token Mint (to burn)
+                  </label>
+                  <input
+                    className="glass-input font-mono text-sm"
+                    value={burnTokenMint}
+                    onChange={(e) => setBurnTokenMint(e.target.value)}
+                    placeholder="Mint of token to buy & burn…"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Reward Token Mint (to distribute)
+                  </label>
+                  <input
+                    className="glass-input font-mono text-sm"
+                    value={distTokenMint}
+                    onChange={(e) => setDistTokenMint(e.target.value)}
+                    placeholder="Mint of token to distribute…"
+                  />
+                </div>
+              </div>
 
-            {/* Distribute token mint */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Reward Token Mint (to distribute)
-              </label>
-              <input
-                className="glass-input font-mono text-sm"
-                value={distTokenMint}
-                onChange={(e) => setDistTokenMint(e.target.value)}
-                placeholder="Mint of token to buy & distribute to holders…"
-              />
+              <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
+                <div className="flex justify-between">
+                  <span>After fee</span>
+                  <span className="text-white font-mono">{afterFee.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>→ Burn pool ({splitPercent}%)</span>
+                  <span className="text-rose-400 font-mono">{(afterFee * splitPercent / 100).toLocaleString()} 🔥</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-700/40 pt-1">
+                  <span>→ Distribute pool ({100 - splitPercent}%)</span>
+                  <span className="text-emerald-400 font-mono font-semibold">{(afterFee * (100 - splitPercent) / 100).toLocaleString()}</span>
+                </div>
+              </div>
+              <button
+                className="btn-primary w-full"
+                onClick={executeBurn}
+                disabled={!rewardsCollected}
+              >
+                Confirm Split
+              </button>
             </div>
+          ) : (
+            /* ── Post-confirm: Jupiter quotes & execute ── */
+            <div className="space-y-4">
+              {/* Summary of split */}
+              <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400 space-y-2">
+                <div className="flex justify-between">
+                  <span>Reward token</span>
+                  <code className="text-brand-300">{rewardMint.slice(0, 8)}…</code>
+                </div>
+                <div className="flex justify-between">
+                  <span>Burn pool</span>
+                  <span className="text-rose-400">{(afterFee * splitPercent / 100).toLocaleString()} → {burnTokenMint ? burnTokenMint.slice(0, 8) + '…' : '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Dist pool</span>
+                  <span className="text-emerald-400">{(afterFee * (100 - splitPercent) / 100).toLocaleString()} → {distTokenMint ? distTokenMint.slice(0, 8) + '…' : '—'}</span>
+                </div>
+              </div>
 
-            {/* Summary */}
-            <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
-              <div className="flex justify-between">
-                <span>After fee</span>
-                <span className="text-white font-mono">{afterFee.toLocaleString()}</span>
+              {/* Jupiter quote previews */}
+              <div className="grid grid-cols-2 gap-3">
+                {burnTokenMint && splitPercent > 0 && (
+                  <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-1">
+                    <p className="font-medium text-rose-300">🔥 Burn Swap</p>
+                    {burnQuote ? (
+                      <>
+                        <p className="text-slate-400">You receive: <span className="text-white font-mono">{burnQuote.outAmount}</span></p>
+                        <p className="text-slate-500">Impact: {burnQuote.priceImpactPct}%</p>
+                      </>
+                    ) : (
+                      <p className="text-slate-500">Loading quote…</p>
+                    )}
+                  </div>
+                )}
+                {distTokenMint && splitPercent < 100 && (
+                  <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-1">
+                    <p className="font-medium text-emerald-300">🎁 Distribute Swap</p>
+                    {distQuote ? (
+                      <>
+                        <p className="text-slate-400">You receive: <span className="text-white font-mono">{distQuote.outAmount}</span></p>
+                        <p className="text-slate-500">Impact: {distQuote.priceImpactPct}%</p>
+                      </>
+                    ) : (
+                      <p className="text-slate-500">Loading quote…</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span>→ Burn pool ({splitPercent}%)</span>
-                <span className="text-rose-400 font-mono">
-                  {(afterFee * splitPercent / 100).toLocaleString()} 🔥
-                </span>
-              </div>
-              <div className="flex justify-between border-t border-slate-700/40 pt-1">
-                <span>→ Distribute pool ({100 - splitPercent}%)</span>
-                <span className="text-emerald-400 font-mono font-semibold">
-                  {(afterFee * (100 - splitPercent) / 100).toLocaleString()}
-                </span>
-              </div>
+
+              {/* Swap errors */}
+              {(swapError || burnError) && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
+                  {swapError || burnError}
+                </div>
+              )}
+
+              {/* Swap button */}
+              {!swapsExecuted ? (
+                <button
+                  className="btn-primary w-full"
+                  onClick={executeSwaps}
+                  disabled={swapping || burning || !connected}
+                >
+                  {!connected
+                    ? "Connect wallet to execute"
+                    : swapping || burning
+                    ? "Executing swaps…"
+                    : "Execute Swaps"}
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 space-y-1">
+                    <p className="font-medium">✓ Swaps executed</p>
+                    {burnTxid && <p className="font-mono text-[10px]">Burn tx: {burnTxid.slice(0, 20)}…</p>}
+                    {distTxid && <p className="font-mono text-[10px]">Dist tx: {distTxid.slice(0, 20)}…</p>}
+                  </div>
+                  <button className="btn-primary w-full" onClick={() => setStep("distribute")}>
+                    Continue to Distribute →
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-          <button
-            className="btn-primary w-full mt-4"
-            onClick={executeBurn}
-            disabled={burnComplete || !rewardsCollected}
-          >
-            {burnComplete ? "✓ Split Confirmed" : "Confirm Split"}
-          </button>
+          )}
         </StepCard>
 
         {/* ===== Step 4: Distribute ===== */}
@@ -699,20 +874,6 @@ export default function Home() {
                     onChange={(e) => setAutoWallet(e.target.value)}
                     placeholder="Wallet address holding reward tokens…"
                   />
-                </div>
-
-                {/* Reward token mint */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Reward Token Mint
-                  </label>
-                  <input
-                    className="glass-input font-mono text-sm"
-                    value={autoRewardMint}
-                    onChange={(e) => setAutoRewardMint(e.target.value)}
-                    placeholder="SPL mint of reward token"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-1">Default: USDC</p>
                 </div>
 
                 {/* Threshold */}
