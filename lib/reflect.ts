@@ -9,7 +9,9 @@ export interface ReflectInput {
   network?: "devnet" | "mainnet";
   rewardAmount: number;
   extraFeePercent: number;
-  burnPercent: number;
+  splitPercent: number;
+  burnTokenMint: string;
+  distTokenMint: string;
   excludeTop: number;
   excludeBottom: number;
 }
@@ -29,11 +31,13 @@ export interface ReflectOutput {
     afterFee: number;
   };
   burn: {
-    burnPercent: number;
-    burned: number;
-    afterBurn: number;
+    splitPercent: number;
+    burnPool: number;
+    burnTokenMint: string;
   };
   distribution: {
+    distPool: number;
+    distTokenMint: string;
     excludedTop: number;
     excludedBottom: number;
     excludedCount: number;
@@ -134,8 +138,8 @@ export function computeReflection(
   input: Omit<ReflectInput, "mint">
 ) {
   const afterFee = input.rewardAmount * (1 - input.extraFeePercent / 100);
-  const burned = afterFee * (input.burnPercent / 100);
-  const afterBurn = afterFee - burned;
+  const burnPool = afterFee * (input.splitPercent / 100);
+  const distPool = afterFee - burnPool;
 
   const sorted = [...holders].sort((a, b) => b.balance - a.balance);
   const n = sorted.length;
@@ -147,7 +151,7 @@ export function computeReflection(
   const distributed: DistributedHolder[] = slice.map((h) => ({
     ...h,
     percentage: totalSliceBalance > 0 ? (h.balance / totalSliceBalance) * 100 : 0,
-    receive: totalSliceBalance > 0 ? afterBurn * (h.balance / totalSliceBalance) : 0,
+    receive: totalSliceBalance > 0 ? distPool * (h.balance / totalSliceBalance) : 0,
   }));
 
   return {
@@ -158,11 +162,13 @@ export function computeReflection(
       afterFee,
     },
     burn: {
-      burnPercent: input.burnPercent,
-      burned,
-      afterBurn,
+      splitPercent: input.splitPercent,
+      burnPool,
+      burnTokenMint: input.burnTokenMint,
     },
     distribution: {
+      distPool,
+      distTokenMint: input.distTokenMint,
       excludedTop: topCut,
       excludedBottom: bottomCut,
       excludedCount: n - slice.length,

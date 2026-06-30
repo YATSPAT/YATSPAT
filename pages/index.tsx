@@ -30,6 +30,10 @@ export default function Home() {
   const [autoSaved, setAutoSaved] = useState(false);
   const [autoSnippet, setAutoSnippet] = useState("");
 
+  // ── Multi‑token swap state ─────────────────────────────────────────
+  const [burnTokenMint, setBurnTokenMint] = useState("");
+  const [distTokenMint, setDistTokenMint] = useState("");
+
   /* ---------- state ---------- */
   const [step, setStep] = useState<Step>("snapshot");
   const [tokenAddress, setTokenAddress] = useState("");
@@ -43,8 +47,8 @@ export default function Home() {
   const [extraFeePercent, setExtraFeePercent] = useState(1);
   const [rewardsCollected, setRewardsCollected] = useState(false);
 
-  // Burn
-  const [burnPercent, setBurnPercent] = useState(1);
+  // Burn / Split
+  const [splitPercent, setSplitPercent] = useState(50);
   const [burnComplete, setBurnComplete] = useState(false);
 
   // Sliders for excluding holders
@@ -74,8 +78,8 @@ export default function Home() {
     [rewardAmount, extraFeePercent]
   );
   const afterBurn = useMemo(
-    () => afterFee * (1 - burnPercent / 100),
-    [afterFee, burnPercent]
+    () => afterFee * ((100 - splitPercent) / 100),
+    [afterFee, splitPercent]
   );
 
   const distribution = useMemo(
@@ -147,7 +151,9 @@ export default function Home() {
         threshold_ui: autoThreshold,
         reward_amount: rewardAmount,
         fee_percent: extraFeePercent,
-        burn_percent: burnPercent,
+        split_percent: splitPercent,
+        burn_token_mint: burnTokenMint,
+        dist_token_mint: distTokenMint,
         exclude_top: excludeTop,
         exclude_bottom: excludeBottom,
       };
@@ -372,52 +378,84 @@ export default function Home() {
           </button>
         </StepCard>
 
-        {/* ===== Step 3: Burn ===== */}
+        {/* ===== Step 3: Swap & Burn ===== */}
         <StepCard
           step={3}
-          title="Burn Tokens"
-          subtitle="Optionally burn a percentage of the collected rewards before distributing."
+          title="Swap & Burn"
+          subtitle="Rewards are split: one portion buys your token and burns it, the rest buys a reward token for holders."
           active={step === "burn"}
           done={burnComplete}
           disabled={!rewardsCollected}
         >
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Burn percentage:{" "}
-              <span className="text-brand-400 font-bold">{burnPercent}%</span>
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={25}
-              value={burnPercent}
-              onChange={(e) => setBurnPercent(Number(e.target.value))}
-              className="w-full from-slider"
-            />
-            <div className="flex justify-between text-xs text-slate-500 mt-1">
-              <span>0%</span>
-              <span>12.5%</span>
-              <span>25%</span>
+          <div className="space-y-4">
+            {/* Split slider */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Burn split:{" "}
+                <span className="text-rose-400 font-bold">{splitPercent}%</span>
+                {" "}to burn ·{" "}
+                <span className="text-emerald-400 font-bold">{100 - splitPercent}%</span>
+                {" "}to distribute
+              </label>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={splitPercent}
+                onChange={(e) => setSplitPercent(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-slate-500 mt-1">
+                <span>0% burn</span><span>50/50</span><span>100% burn</span>
+              </div>
             </div>
-          </div>
-          <div className="mt-3 p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
-            <div className="flex justify-between">
-              <span>Available</span>
-              <span className="text-white font-mono">
-                {afterFee.toLocaleString()} RFLCT
-              </span>
+
+            {/* Burn token mint */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Your Token Mint (to burn)
+              </label>
+              <input
+                className="glass-input font-mono text-sm"
+                value={burnTokenMint}
+                onChange={(e) => setBurnTokenMint(e.target.value)}
+                placeholder="Mint of token to buy & burn…"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">PumpFun reward tokens → Jupiter swap → your token → 🔥</p>
             </div>
-            <div className="flex justify-between">
-              <span>Burned ({burnPercent}%)</span>
-              <span className="text-rose-400 font-mono">
-                🔥 −{(afterFee * burnPercent) / 100} RFLCT
-              </span>
+
+            {/* Distribute token mint */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Reward Token Mint (to distribute)
+              </label>
+              <input
+                className="glass-input font-mono text-sm"
+                value={distTokenMint}
+                onChange={(e) => setDistTokenMint(e.target.value)}
+                placeholder="Mint of token to buy & distribute to holders…"
+              />
             </div>
-            <div className="flex justify-between border-t border-slate-700/40 pt-1">
-              <span>To distribute</span>
-              <span className="text-emerald-400 font-mono font-semibold">
-                {afterBurn.toLocaleString()} RFLCT
-              </span>
+
+            {/* Summary */}
+            <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
+              <div className="flex justify-between">
+                <span>After fee</span>
+                <span className="text-white font-mono">{afterFee.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>→ Burn pool ({splitPercent}%)</span>
+                <span className="text-rose-400 font-mono">
+                  {(afterFee * splitPercent / 100).toLocaleString()} 🔥
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-slate-700/40 pt-1">
+                <span>→ Distribute pool ({100 - splitPercent}%)</span>
+                <span className="text-emerald-400 font-mono font-semibold">
+                  {(afterFee * (100 - splitPercent) / 100).toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
           <button
@@ -425,7 +463,7 @@ export default function Home() {
             onClick={executeBurn}
             disabled={burnComplete || !rewardsCollected}
           >
-            {burnComplete ? "✓ Burn Complete" : "Execute Burn"}
+            {burnComplete ? "✓ Split Confirmed" : "Confirm Split"}
           </button>
         </StepCard>
 
@@ -433,7 +471,7 @@ export default function Home() {
         <StepCard
           step={4}
           title="Distribute to Holders"
-          subtitle="Use the sliders to exclude the top or bottom holders from this distribution."
+          subtitle={`Swap ${afterFee * (100 - splitPercent) / 100} reward tokens → ${distTokenMint ? distTokenMint.slice(0,8)+'…' : 'reward token'} → distribute to snapshot holders.`}
           active={step === "distribute"}
           done={distributionDone}
           disabled={!burnComplete || eligibleHolders.length === 0}
@@ -566,8 +604,8 @@ export default function Home() {
             <p className="text-slate-400 max-w-md mx-auto">
               {afterBurn.toLocaleString()} RFLCT distributed across{" "}
               {eligibleHolders.length} holders.
-              {burnPercent > 0 &&
-                ` ${((afterFee * burnPercent) / 100).toLocaleString()} RFLCT burned.`}
+              {splitPercent > 0 &&
+                ` ${((afterFee * splitPercent) / 100).toLocaleString()} RFLCT swapped → your token → 🔥 burned.`}
               {extraFeePercent > 0 &&
                 ` ${((rewardAmount * extraFeePercent) / 100).toLocaleString()} RFLCT collected as fee.`}
             </p>
@@ -590,7 +628,9 @@ export default function Home() {
   "network": "mainnet",
   "rewardAmount": ${rewardAmount},
   "extraFeePercent": ${extraFeePercent},
-  "burnPercent": ${burnPercent},
+  "splitPercent": ${splitPercent},
+  "burnTokenMint": "${burnTokenMint}",
+  "distTokenMint": "${distTokenMint}",
   "excludeTop": ${excludeTop},
   "excludeBottom": ${excludeBottom}
 }'`}
@@ -603,7 +643,9 @@ export default function Home() {
   "network": "mainnet",
   "rewardAmount": ${rewardAmount},
   "extraFeePercent": ${extraFeePercent},
-  "burnPercent": ${burnPercent},
+  "splitPercent": ${splitPercent},
+  "burnTokenMint": "${burnTokenMint}",
+  "distTokenMint": "${distTokenMint}",
   "excludeTop": ${excludeTop},
   "excludeBottom": ${excludeBottom}
 }'`}
@@ -699,7 +741,7 @@ export default function Home() {
                     <span>Target: <code className="text-brand-300">{tokenAddress.slice(0, 8)}…</code></span>
                     <span>Rewards: {rewardAmount.toLocaleString()}</span>
                     <span>Fee: {extraFeePercent}%</span>
-                    <span>Burn: {burnPercent}%</span>
+                    <span>Split: {splitPercent}%</span>
                     <span>Exclude top: {excludeTop}%</span>
                     <span>Exclude bottom: {excludeBottom}%</span>
                   </div>

@@ -34,7 +34,9 @@ export default async function handler(
         threshold_ui: config.threshold_ui || 100,
         reward_amount: config.reward_amount || 1000,
         fee_percent: config.fee_percent || 0,
-        burn_percent: config.burn_percent || 0,
+        split_percent: config.split_percent ?? 50,
+        burn_token_mint: (config.burn_token_mint as string) || "",
+        dist_token_mint: (config.dist_token_mint as string) || "",
         exclude_top: config.exclude_top || 0,
         exclude_bottom: config.exclude_bottom || 0,
       }]
