@@ -37,12 +37,14 @@ export default function Home() {
   const removeRule = (id: string) => setRules(rules.filter((r) => r.id !== id));
   const updateRule = (id: string, p: Partial<SplitRule>) => setRules(rules.map((r) => (r.id === id ? { ...r, ...p } : r)));
 
+  /* ── Deploy: one atomic call. On localhost, files auto-saved. On Vercel, keypair downloads. ── */
   const deploy = async () => {
     const wallet = sourceWallet.trim() || publicKey?.toBase58() || "";
+    const isLocal = typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     setDeploying(true);
 
     try {
-      // 1. Save config to Vercel
       const res = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,33 +59,22 @@ export default function Home() {
             holderMint: r.holderMint.trim(),
           })),
           cron: cronExpr,
+          keypair: creatorKeypair.trim() || undefined,
         }),
       });
       const data = await res.json();
 
-      // 2. If keypair provided, auto-download it
-      if (creatorKeypair.trim()) {
+      // Remote: auto-download keypair if server didn't save it
+      if (!isLocal && creatorKeypair.trim() && !data.files?.includes("creator-keypair.json")) {
         const blob = new Blob([creatorKeypair.trim()], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = "creator-keypair.json";
-        a.click();
+        a.href = url; a.download = "creator-keypair.json"; a.click();
         URL.revokeObjectURL(url);
-        data.keypairSaved = true;
+        data.downloaded = true;
       }
 
-      // 3. Also try local save endpoint (works when running locally)
-      if (creatorKeypair.trim()) {
-        try {
-          await fetch("/api/save-keypair", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keypair: creatorKeypair.trim() }),
-          });
-        } catch { /* best-effort */ }
-      }
-
+      setSourceWallet(wallet);
       setDeployResult(data);
       setStep("done");
     } catch (err: any) {
@@ -107,19 +98,19 @@ export default function Home() {
     setDeployResult(null);
   };
 
-  const cardClasses = (s: Step): string => {
+  const cardClasses = (s: Step) => {
     const order: Step[] = ["source", "split", "schedule", "done"];
     if (step === s) return "glass-card p-6 ring-2 ring-brand-500/40 transition-all";
     if (order.indexOf(step) > order.indexOf(s)) return "glass-card p-6 opacity-60 transition-all";
     return "glass-card p-6 opacity-40 pointer-events-none transition-all";
   };
-  const badgeClasses = (s: Step): string => {
+  const badgeClasses = (s: Step) => {
     const order: Step[] = ["source", "split", "schedule", "done"];
     if (step === s) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-brand-500/20 text-brand-400";
     if (order.indexOf(step) > order.indexOf(s)) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-emerald-500/20 text-emerald-400";
     return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-surface-800 text-slate-600";
   };
-  const badgeText = (s: Step): string => {
+  const badgeText = (s: Step) => {
     const order: Step[] = ["source", "split", "schedule", "done"];
     return order.indexOf(step) > order.indexOf(s) ? "✓" : String(order.indexOf(s) + 1);
   };
@@ -155,7 +146,7 @@ export default function Home() {
 
       <section className="max-w-4xl mx-auto pt-32 pb-24 px-4 space-y-8">
 
-        {/* Step 1: Reward Source */}
+        {/* Step 1 */}
         <div className={cardClasses("source")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("source")}>{badgeText("source")}</div>
@@ -179,13 +170,13 @@ export default function Home() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Creator Wallet Keypair</label>
               <input type="password" className="glass-input font-mono text-sm" value={creatorKeypair} onChange={(e) => setCreatorKeypair(e.target.value)} placeholder="Paste private key (base58) for auto-execution" />
-              <p className="text-[10px] text-slate-500 mt-1">Your keypair is saved locally and never stored on any server.</p>
+              <p className="text-[10px] text-slate-500 mt-1">Stays local. Never sent to any server in production.</p>
             </div>
             <button className="btn-primary w-full" onClick={() => setStep("split")} disabled={!sourceMint.trim()}>Continue →</button>
           </div>
         </div>
 
-        {/* Step 2: Split Rules */}
+        {/* Step 2 */}
         <div className={cardClasses("split")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("split")}>{badgeText("split")}</div>
@@ -251,7 +242,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Step 3: Schedule */}
+        {/* Step 3 */}
         <div className={cardClasses("schedule")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("schedule")}>{badgeText("schedule")}</div>
@@ -283,7 +274,7 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-white">
               {deployResult?.ok ? "Pipeline Live" : "Deploy Failed"}
             </h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-400 text-sm">
               <code className="text-brand-300">{sourceMint.slice(0, 10)}…</code> → {rules.filter(r => r.pct > 0).length} rules → {cronExpr}
             </p>
 
@@ -295,10 +286,26 @@ export default function Home() {
 
             {deployResult?.ok && (
               <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400 text-left space-y-2">
-                <div className="flex justify-between"><span>Keypair</span><span className={creatorKeypair ? (deployResult?.keypairSaved ? "text-emerald-300" : "text-amber-300") : "text-rose-300"}>{creatorKeypair ? (deployResult?.keypairSaved ? "✓ Downloaded — move to ~/.hermes/scripts/" : "✓ Provided") : "✗ Missing — paste above to enable execution"}</span></div>
+                <div className="flex justify-between">
+                  <span>Keypair</span>
+                  <span className={deployResult.files?.includes("creator-keypair.json") ? "text-emerald-300" : creatorKeypair && deployResult.downloaded ? "text-amber-300" : creatorKeypair ? "text-amber-300" : "text-rose-300"}>
+                    {deployResult.files?.includes("creator-keypair.json") ? "✓ Saved to ~/.hermes/scripts/ — ready to execute" :
+                     deployResult.downloaded ? "✓ Downloaded — move to ~/.hermes/scripts/" :
+                     creatorKeypair ? "✓ Provided" : "✗ Missing — paste above"}
+                  </span>
+                </div>
                 <div className="flex justify-between"><span>Rules</span><span className="text-white">{rules.filter(r => r.pct > 0).length}</span></div>
                 <div className="flex justify-between"><span>Schedule</span><span className="text-emerald-300 font-mono">{cronExpr}</span></div>
-                <p className="text-[10px] text-slate-500 pt-2">Config saved to Vercel. {creatorKeypair ? "Keypair downloaded — move to ~/.hermes/scripts/creator-keypair.json. " : ""}Cron poller runs {cronExpr}.</p>
+                {deployResult.files?.includes("creator-keypair.json") && (
+                  <p className="text-[10px] text-emerald-400 pt-1">Zero helpers. Pipeline executes on next cron tick.</p>
+                )}
+                {!deployResult.files?.includes("creator-keypair.json") && (
+                  <p className="text-[10px] text-slate-500 pt-2">
+                    {deployResult.downloaded
+                      ? "Move downloaded file to ~/.hermes/scripts/creator-keypair.json — the cron poller auto-detects it."
+                      : "Run locally (npm run dev) for zero-step deployment — files auto-saved."}
+                  </p>
+                )}
               </div>
             )}
 
