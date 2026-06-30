@@ -1,49 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import fs from "fs";
-import path from "path";
 
-const CONFIG_PATH = path.join(process.cwd(), ".auto-reflect-config.json");
+// In-memory cache — survives between requests in same deployment
+// (Vercel serverless can't write to disk, so we keep it warm in the handler)
+// For actual persistence, the poller reads from ~/.hermes/scripts/reflector-jobs.json
+
+let cached: Record<string, unknown> = {};
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<{ ok: boolean; config?: Record<string, unknown>; snippet?: string } | { error: string }>
+  res: NextApiResponse<{ ok: boolean } & Record<string, unknown>>
 ) {
   if (req.method === "GET") {
-    try {
-      if (fs.existsSync(CONFIG_PATH)) {
-        const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-        return res.status(200).json(JSON.parse(raw));
-      }
-      return res.status(200).json({ ok: false, config: {} });
-    } catch {
-      return res.status(200).json({ ok: false, config: {} });
-    }
+    return res.status(200).json({ ok: true, ...cached });
   }
 
   if (req.method === "POST") {
-    const config = req.body as Record<string, unknown>;
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-
-    const snippet = JSON.stringify({
-      jobs: [{
-        enabled: config.enabled ?? true,
-        label: config.label || "Auto Reflect",
-        monitor_wallet: config.monitor_wallet || "CHANGE_ME",
-        reward_mint: config.reward_mint || "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        target_mint: config.target_mint || "",
-        threshold_ui: config.threshold_ui || 100,
-        reward_amount: config.reward_amount || 1000,
-        fee_percent: config.fee_percent || 0,
-        split_percent: config.split_percent ?? 50,
-        burn_token_mint: (config.burn_token_mint as string) || "",
-        dist_token_mint: (config.dist_token_mint as string) || "",
-        exclude_top: config.exclude_top || 0,
-        exclude_bottom: config.exclude_bottom || 0,
-      }]
-    }, null, 2);
-
-    return res.status(200).json({ ok: true, config, snippet });
+    cached = req.body as Record<string, unknown>;
+    return res.status(200).json({ ok: true, ...cached });
   }
 
-  return res.status(405).json({ error: "Method not allowed" });
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
 }

@@ -1,281 +1,142 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
-import { useJupiterSwap } from "../hooks/useJupiterSwap";
-import { useBurnToken } from "../hooks/useBurnToken";
 
 /* ------------------------------------------------------------------ */
-/*  TypeScript types                                                  */
+/*  Types                                                              */
 /* ------------------------------------------------------------------ */
-interface Holder {
-  address: string;
-  balance: number;
-  percentage: number;
+
+type Step = "source" | "split" | "schedule" | "done";
+
+type RuleType = "burn" | "buy-burn" | "distribute" | "send";
+
+interface SplitRule {
+  id: string;
+  type: RuleType;
+  pct: number;
+  /** Target mint for swap operations (burn, buy-burn, distribute) */
+  targetMint: string;
+  /** Destination wallet for send / distribution */
+  targetWallet: string;
+  /** Mint of the holders to snapshot (distribute only) */
+  holderMint: string;
 }
 
-type Step = "snapshot" | "rewards" | "burn" | "distribute" | "done";
+/* ------------------------------------------------------------------ */
+/*  Main Page                                                          */
+/* ------------------------------------------------------------------ */
 
-/* ------------------------------------------------------------------ */
-/*  Main Page                                                         */
-/* ------------------------------------------------------------------ */
 export default function Home() {
   const { publicKey, connected } = useWallet();
-  const { signedIn, signing, signIn, signOut, siwsAddress } = useSiws();
-  const { quote: jupQuote, executeSwap, swapping, swapError, clearError: clearSwapError } = useJupiterSwap();
-  const { executeBurn: burnTokens, burning, burnError, clearError: clearBurnError } = useBurnToken();
+  const { signedIn, signing, signIn, signOut } = useSiws();
 
-  // ── Auto‑distribute state ──────────────────────────────────────────
-  const [autoEnabled, setAutoEnabled] = useState(false);
-  const [autoWallet, setAutoWallet] = useState("");
-  const [autoThreshold, setAutoThreshold] = useState(100);
-  const [autoSaving, setAutoSaving] = useState(false);
-  const [autoSaved, setAutoSaved] = useState(false);
-  const [autoSnippet, setAutoSnippet] = useState("");
 
-  // ── Multi‑token swap state
-  const [burnTokenMint, setBurnTokenMint] = useState("");
-  const [distTokenMint, setDistTokenMint] = useState("");
 
-  // ── Swap execution state ────────────────────────────────────────────
-  const [burnQuote, setBurnQuote] = useState<{ outAmount: string; priceImpactPct: string } | null>(null);
-  const [distQuote, setDistQuote] = useState<{ outAmount: string; priceImpactPct: string } | null>(null);
-  const [burnTxid, setBurnTxid] = useState("");
-  const [distTxid, setDistTxid] = useState("");
-  const [swapsExecuted, setSwapsExecuted] = useState(false);
+  /* ── Step 1: Source ─────────────────────────────────────────────── */
+  const [sourceMint, setSourceMint] = useState("");
+  const [sourceWallet, setSourceWallet] = useState("");
 
-  /* ---------- state ---------- */
-  const [step, setStep] = useState<Step>("snapshot");
-  const [tokenAddress, setTokenAddress] = useState("");
-  const [snapshotHolders, setSnapshotHolders] = useState<Holder[]>([]);
-  const [snapshotTaken, setSnapshotTaken] = useState(false);
-  const [loading, setLoading] = useState(false);
+  /* ── Step 2: Split rules ────────────────────────────────────────── */
+  const [rules, setRules] = useState<SplitRule[]>([
+    { id: "1", type: "burn", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+    { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+  ]);
+
+  /* ── Step 3: Schedule ───────────────────────────────────────────── */
+  const [cronExpr, setCronExpr] = useState("every 30m");
+
+  /* ── Navigation ──────────────────────────────────────────────────── */
+  const [step, setStep] = useState<Step>("source");
   const [error, setError] = useState("");
+  const [generatedSnippet, setGeneratedSnippet] = useState("");
 
-  // Rewards
-  const [rewardAmount, setRewardAmount] = useState(1000);
-  const [extraFeePercent, setExtraFeePercent] = useState(1);
-  const [rewardMint, setRewardMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-  const [rewardsCollected, setRewardsCollected] = useState(false);
+  const totalPct = useMemo(() => rules.reduce((s, r) => s + r.pct, 0), [rules]);
 
-  // Burn / Split
-  const [splitPercent, setSplitPercent] = useState(50);
-  const [burnComplete, setBurnComplete] = useState(false);
+  const addRule = () => {
+    setRules([...rules, { id: String(Date.now()), type: "burn", pct: 0, targetMint: "", targetWallet: "", holderMint: "" }]);
+  };
 
-  // Sliders for excluding holders
-  const [excludeTop, setExcludeTop] = useState(0);
-  const [excludeBottom, setExcludeBottom] = useState(0);
-  const [distributionDone, setDistributionDone] = useState(false);
+  const removeRule = (id: string) => setRules(rules.filter((r) => r.id !== id));
 
-  /* ---------- filtered holders (after exclusions) ---------- */
-  const eligibleHolders = useMemo(() => {
-    const sorted = [...snapshotHolders].sort((a, b) => b.balance - a.balance);
-    const n = sorted.length;
-    const topCut = Math.floor(n * (excludeTop / 100));
-    const bottomCut = Math.floor(n * (excludeBottom / 100));
-    const slice = sorted.slice(topCut, n - bottomCut);
-    const totalBalance = slice.reduce((s, h) => s + h.balance, 0);
-    return slice.map((h) => ({
-      ...h,
-      percentage: totalBalance > 0 ? (h.balance / totalBalance) * 100 : 0,
-    }));
-  }, [snapshotHolders, excludeTop, excludeBottom]);
+  const updateRule = (id: string, patch: Partial<SplitRule>) =>
+    setRules(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  const totalExcluded = snapshotHolders.length - eligibleHolders.length;
-
-  /* ---------- distribution amounts ---------- */
-  const afterFee = useMemo(
-    () => rewardAmount * (1 - extraFeePercent / 100),
-    [rewardAmount, extraFeePercent]
-  );
-  const afterBurn = useMemo(
-    () => afterFee * ((100 - splitPercent) / 100),
-    [afterFee, splitPercent]
-  );
-
-  const distribution = useMemo(
-    () =>
-      eligibleHolders.map((h) => ({
-        ...h,
-        receive: afterBurn * (h.percentage / 100),
+  /* ── Generate cron snippet ───────────────────────────────────────── */
+  const generateJob = () => {
+    const input = {
+      sourceMint: sourceMint.trim(),
+      sourceWallet: sourceWallet.trim() || publicKey?.toBase58() || "",
+      network: "mainnet",
+      rules: rules.filter((r) => r.pct > 0).map((r) => ({
+        type: r.type,
+        pct: r.pct,
+        targetMint: r.targetMint.trim(),
+        targetWallet: r.targetWallet.trim(),
+        holderMint: r.holderMint.trim(),
       })),
-    [eligibleHolders, afterBurn]
-  );
+    };
 
-  /* ---------- handlers ---------- */
-  const takeSnapshot = async () => {
-    if (!tokenAddress.trim()) {
-      setError("Please enter a token mint address");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/holders?mint=${encodeURIComponent(tokenAddress.trim())}&network=mainnet`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch holders");
-      setSnapshotHolders(data.holders);
-      setSnapshotTaken(true);
-      setStep("rewards");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to fetch holders");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const collectRewards = () => {
-    setRewardsCollected(true);
-    setStep("burn");
-  };
-
-  const refreshQuotes = async () => {
-    if (!burnTokenMint.trim() && !distTokenMint.trim()) return;
-    const rewardDecimals = 6; // assume for quote display
-    const afterFeeRaw = Math.floor(afterFee * 10 ** rewardDecimals);
-
-    if (burnTokenMint.trim() && splitPercent > 0) {
-      const q = await jupQuote(
-        rewardMint,
-        burnTokenMint.trim(),
-        String(Math.floor(afterFeeRaw * splitPercent / 100))
-      );
-      if (q) setBurnQuote({ outAmount: q.outAmount, priceImpactPct: q.priceImpactPct });
-    }
-    if (distTokenMint.trim() && splitPercent < 100) {
-      const q = await jupQuote(
-        rewardMint,
-        distTokenMint.trim(),
-        String(Math.floor(afterFeeRaw * (100 - splitPercent) / 100))
-      );
-      if (q) setDistQuote({ outAmount: q.outAmount, priceImpactPct: q.priceImpactPct });
-    }
-  };
-
-  // Auto-refresh quotes when split or mints change
-  useEffect(() => {
-    if (burnComplete && connected) refreshQuotes();
-  }, [burnComplete, splitPercent, burnTokenMint, distTokenMint, connected]);
-
-  const executeSwaps = async () => {
-    if (!connected) {
-      setError("Connect your wallet first");
-      return;
-    }
-    clearSwapError();
-    clearBurnError();
-    setError("");
-
-    const rewardDecimals = 6;
-
-    // Step 1: Swap burn pool → burn token
-    if (burnTokenMint.trim() && splitPercent > 0) {
-      const burnAmount = String(Math.floor(afterFee * splitPercent / 100 * 10 ** rewardDecimals));
-      const res = await executeSwap(rewardMint, burnTokenMint.trim(), burnAmount);
-      if (!res) return;
-      setBurnTxid(res.txid);
-
-      // Step 2: Burn the tokens we just received
-      if (burnQuote) {
-        const burnTokenDecimals = 6;
-        const outAmountUi = Number(res.outAmount) / 10 ** burnTokenDecimals;
-        await burnTokens(burnTokenMint.trim(), outAmountUi, burnTokenDecimals);
-      }
-    }
-
-    // Step 3: Swap dist pool → reward token
-    if (distTokenMint.trim() && splitPercent < 100) {
-      const distAmount = String(Math.floor(afterFee * (100 - splitPercent) / 100 * 10 ** rewardDecimals));
-      const res = await executeSwap(rewardMint, distTokenMint.trim(), distAmount);
-      if (!res) return;
-      setDistTxid(res.txid);
-    }
-
-    setSwapsExecuted(true);
-    setBurnComplete(true);
-    setStep("distribute");
-  };
-
-  const executeBurn = () => {
-    if (!connected) {
-      setError("Connect your wallet first to execute swaps");
-      return;
-    }
-    setBurnComplete(true);
-    // Quotes refresh via useEffect
-  };
-
-  const executeDistribution = () => {
-    setDistributionDone(true);
+    const json = JSON.stringify(input, null, 2);
+    setGeneratedSnippet(json);
     setStep("done");
+
+    // POST to /api/auto-config for the poller
+    fetch("/api/auto-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...input, cron: cronExpr, label: `Reflector — ${sourceMint.slice(0, 8)}…` }),
+    }).catch(() => {});
   };
 
   const resetAll = () => {
-    setStep("snapshot");
-    setSnapshotTaken(false);
-    setRewardsCollected(false);
-    setBurnComplete(false);
-    setDistributionDone(false);
-    setSnapshotHolders([]);
-    setBurnQuote(null);
-    setDistQuote(null);
-    setBurnTxid("");
-    setDistTxid("");
-    setSwapsExecuted(false);
+    setStep("source");
+    setSourceMint("");
+    setSourceWallet("");
+    setRules([
+      { id: "1", type: "burn", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+      { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+    ]);
+    setCronExpr("every 30m");
     setError("");
-    clearSwapError();
-    clearBurnError();
+    setGeneratedSnippet("");
   };
 
-  const saveAutoConfig = async () => {
-    setAutoSaving(true);
-    setAutoSaved(false);
-    try {
-      const config = {
-        enabled: autoEnabled,
-        label: `Auto Reflect — ${tokenAddress.slice(0, 8)}…`,
-        monitor_wallet: autoWallet.trim(),
-        reward_mint: rewardMint.trim(),
-        target_mint: tokenAddress.trim(),
-        threshold_ui: autoThreshold,
-        reward_amount: rewardAmount,
-        fee_percent: extraFeePercent,
-        split_percent: splitPercent,
-        burn_token_mint: burnTokenMint,
-        dist_token_mint: distTokenMint,
-        exclude_top: excludeTop,
-        exclude_bottom: excludeBottom,
-      };
-      const res = await fetch("/api/auto-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      });
-      const data = await res.json();
-      setAutoSaved(true);
-      if (data.snippet) setAutoSnippet(data.snippet);
-      setTimeout(() => setAutoSaved(false), 3000);
-    } catch {
-      setError("Failed to save auto-distribute config");
-    } finally {
-      setAutoSaving(false);
+  const cardClasses = (s: Step): string => {
+    if (step === s) return "glass-card p-6 ring-2 ring-brand-500/40 transition-all";
+    const stepOrder: Step[] = ["source", "split", "schedule", "done"];
+    if (stepOrder.indexOf(step) > stepOrder.indexOf(s)) return "glass-card p-6 opacity-60 transition-all";
+    return "glass-card p-6 opacity-40 pointer-events-none transition-all";
+  };
+  const badgeClasses = (s: Step): string => {
+    const stepOrder: Step[] = ["source", "split", "schedule", "done"];
+    if (step === s) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-brand-500/20 text-brand-400";
+    if (stepOrder.indexOf(step) > stepOrder.indexOf(s)) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-emerald-500/20 text-emerald-400";
+    return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-surface-800 text-slate-600";
+  };
+  const badgeText = (s: Step): string => {
+    const stepOrder: Step[] = ["source", "split", "schedule", "done"];
+    return stepOrder.indexOf(step) > stepOrder.indexOf(s) ? "✓" : String(stepOrder.indexOf(s) + 1);
+  };
+  const ruleTypeLabel = (t: RuleType): string => {
+    switch (t) {
+      case "burn": return "🔥 Burn my token";
+      case "buy-burn": return "🔄 Swap → burn";
+      case "distribute": return "📤 Distribute to holders";
+      case "send": return "💸 Send to wallet";
     }
   };
 
-  /* ---------- UI ---------- */
+  /* ── UI ──────────────────────────────────────────────────────────── */
   return (
     <main className="min-h-screen bg-gradient-to-br from-surface-950 via-surface-900 to-brand-950/40">
       {/* Header */}
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-xl shadow-lg shadow-brand-500/30">
-              ⟡
-            </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-500 flex items-center justify-center text-xl shadow-lg shadow-brand-500/30">⟡</div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">
-                Reflector
-              </h1>
+              <h1 className="text-lg font-bold text-white tracking-tight">Reflector</h1>
               <p className="text-xs text-slate-400 flex items-center gap-2">
                 Reflection Token Panel
                 <span className="px-1.5 py-px rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] uppercase tracking-wider">MAINNET</span>
@@ -283,45 +144,15 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <StepsIndicator step={step} />
-            <WalletMultiButton
-              style={{
-                background: connected
-                  ? "linear-gradient(135deg, #059669, #10b981)"
-                  : "linear-gradient(135deg, #4f46e5, #6366f1)",
-                borderRadius: "0.75rem",
-                height: "2.5rem",
-                fontSize: "0.875rem",
-                padding: "0 1rem",
-              }}
-            />
+            <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #4f46e5, #6366f1)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.875rem", padding: "0 1rem" }} />
             {connected && (
               signedIn ? (
-                <button
-                  onClick={signOut}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all"
-                  title="Signed in as this wallet"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  SIWS ✓
+                <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> SIWS ✓
                 </button>
               ) : (
-                <button
-                  onClick={signIn}
-                  disabled={signing}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50"
-                >
-                  {signing ? (
-                    <>
-                      <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Signing…
-                    </>
-                  ) : (
-                    "Sign In With Solana"
-                  )}
+                <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50">
+                  {signing ? "Signing…" : "Sign In With Solana"}
                 </button>
               )
             )}
@@ -329,746 +160,193 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Body */}
       <section className="max-w-4xl mx-auto pt-32 pb-24 px-4 space-y-8">
-        {/* ===== Step 1: Snapshot ===== */}
-        <StepCard
-          step={1}
-          title="Snapshot Holders"
-          subtitle="Enter a Solana token mint address to fetch holders via Helius mainnet."
-          active={step === "snapshot"}
-          done={snapshotTaken}
-        >
+        {/* ══════════ Step 1: Reward Source ══════════ */}
+        <div className={cardClasses("source")}>
+          <div className="flex items-start gap-4 mb-5">
+            <div className={badgeClasses("source")}>
+              {badgeText("source")}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Reward Source</h3>
+              <p className="text-sm text-slate-400">What token are you collecting rewards FROM? This is the PumpFun token or fee token that accumulates. Optionally, which wallet holds them.</p>
+            </div>
+          </div>
           <div className="space-y-4">
-            {/* Devnet test token presets */}
-            {!snapshotTaken && (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-[11px] text-slate-500 self-center">Try:</span>
-                {[
-                  { label: "ANSEM", mint: "F23GvgK5TvSA78FmibZot7gtU3yfAiPb4BkD4RrZc18B" },
-                  { label: "USDC", mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
-                ].map((t) => (
-                  <button
-                    key={t.mint}
-                    onClick={() => setTokenAddress(t.mint)}
-                    className="px-2 py-1 rounded-lg bg-surface-800 border border-slate-600/50 text-[11px] text-slate-300 hover:border-brand-500/50 hover:text-brand-300 transition-all font-mono truncate max-w-[220px]"
-                    title={t.mint}
-                  >
-                    {t.label}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Reward Token Mint</label>
+              <input className="glass-input font-mono text-sm" value={sourceMint} onChange={(e) => setSourceMint(e.target.value)} placeholder="Paste the SPL token mint…" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Wallet Holding Rewards (optional)</label>
+              <input className="glass-input font-mono text-sm" value={sourceWallet} onChange={(e) => setSourceWallet(e.target.value)} placeholder={connected ? publicKey?.toBase58() || "Connect wallet first" : "Connect wallet to auto-fill"} />
+              {connected && !sourceWallet && (
+                <button className="text-xs text-brand-400 mt-1 hover:underline" onClick={() => setSourceWallet(publicKey!.toBase58())}>Use connected wallet</button>
+              )}
+            </div>
+            <button className="btn-primary w-full" onClick={() => setStep("split")} disabled={!sourceMint.trim()}>Continue to Split Rules →</button>
+          </div>
+        </div>
+
+        {/* ══════════ Step 2: Split Rules ══════════ */}
+        <div className={cardClasses("split")}>
+          <div className="flex items-start gap-4 mb-5">
+            <div className={badgeClasses("split")}>
+              {badgeText("split")}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Split Rules</h3>
+              <p className="text-sm text-slate-400">Divide your rewards any number of ways. Swap → burn, buy → distribute, send to treasury — each rule gets a % cut.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {rules.map((rule, i) => (
+              <div key={rule.id} className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rule {i + 1}</span>
+                  {rules.length > 1 && (
+                    <button onClick={() => removeRule(rule.id)} className="text-xs text-rose-400 hover:text-rose-300">Remove</button>
+                  )}
+                </div>
+
+                {/* Rule type */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Rule Type</label>
+                    <select className="glass-input text-sm" value={rule.type} onChange={(e) => updateRule(rule.id, { type: e.target.value as RuleType })}>
+                      <option value="burn">🔥 Burn my token</option>
+                      <option value="buy-burn">🔄 Swap → burn</option>
+                      <option value="distribute">📤 Distribute to holders</option>
+                      <option value="send">💸 Send to wallet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Split %</label>
+                    <input type="number" className="glass-input text-sm" value={rule.pct} onChange={(e) => updateRule(rule.id, { pct: Math.min(100, Math.max(0, Number(e.target.value))) })} min={0} max={100} />
+                  </div>
+                </div>
+
+                {/* Conditional fields */}
+                {rule.type !== "burn" && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">
+                      {rule.type === "buy-burn" ? "Token to swap to & burn" : rule.type === "distribute" ? "Token to distribute" : "Token to send"}
+                    </label>
+                    <input className="glass-input font-mono text-xs" value={rule.targetMint} onChange={(e) => updateRule(rule.id, { targetMint: e.target.value })} placeholder="SPL mint…" />
+                  </div>
+                )}
+
+                {rule.type === "send" && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Destination Wallet</label>
+                    <input className="glass-input font-mono text-xs" value={rule.targetWallet} onChange={(e) => updateRule(rule.id, { targetWallet: e.target.value })} placeholder="Recipient wallet…" />
+                  </div>
+                )}
+
+                {rule.type === "distribute" && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Snapshot holders of</label>
+                    <input className="glass-input font-mono text-xs" value={rule.holderMint} onChange={(e) => updateRule(rule.id, { holderMint: e.target.value })} placeholder="Token mint whose holders receive…" />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <button onClick={addRule} className="w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-500 hover:border-brand-500/40 hover:text-brand-400 transition-all">+ Add Rule</button>
+
+            {/* Total check */}
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Total</span>
+              <span className={`font-mono font-bold ${totalPct === 100 ? "text-emerald-400" : "text-rose-400"}`}>{totalPct}%</span>
+            </div>
+            {totalPct !== 100 && <p className="text-xs text-rose-400">Must add up to 100%</p>}
+
+            <div className="flex gap-3">
+              <button className="btn-secondary flex-1" onClick={() => setStep("source")}>← Back</button>
+              <button className="btn-primary flex-1" onClick={() => setStep("schedule")} disabled={totalPct !== 100 || rules.length === 0}>Continue to Schedule →</button>
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════ Step 3: Schedule ══════════ */}
+        <div className={cardClasses("schedule")}>
+          <div className="flex items-start gap-4 mb-5">
+            <div className={badgeClasses("schedule")}>
+              {badgeText("schedule")}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Schedule</h3>
+              <p className="text-sm text-slate-400">How often should Reflector check rewards and run the splits?</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Run every</label>
+              <div className="grid grid-cols-4 gap-2">
+                {["every 5m", "every 15m", "every 30m", "every 1h", "every 6h", "every 12h", "0 */6 * * *", "0 0 * * *"].map((c) => (
+                  <button key={c} onClick={() => setCronExpr(c)} className={`px-3 py-2 rounded-lg text-xs font-mono transition-all ${cronExpr === c ? "bg-brand-500/20 border border-brand-500/40 text-brand-300" : "bg-surface-800 border border-slate-700/30 text-slate-400 hover:border-slate-500/50"}`}>
+                    {c}
                   </button>
                 ))}
               </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Token Mint Address
-              </label>
-              <input
-                className="glass-input font-mono text-sm"
-                value={tokenAddress}
-                onChange={(e) => setTokenAddress(e.target.value)}
-                placeholder="Paste Solana token mint address..."
-              />
+              <input className="glass-input font-mono text-sm mt-3" value={cronExpr} onChange={(e) => setCronExpr(e.target.value)} placeholder="Or type your own cron expression…" />
             </div>
-            {error && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
-                {error}
-              </div>
-            )}
-            <button
-              className="btn-primary w-full"
-              onClick={takeSnapshot}
-              disabled={snapshotTaken || loading || !tokenAddress.trim()}
-            >
-              {loading
-                ? "Fetching holders from Helius..."
-                : snapshotTaken
-                ? `✓ Snapshot taken — ${snapshotHolders.length} holders`
-                : "Take Snapshot"}
-            </button>
-          </div>
-          {snapshotTaken && snapshotHolders.length === 0 && (
-            <div className="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm text-center">
-              No holders found for this token. The mint may be new or have zero holders.
-            </div>
-          )}
-          {snapshotTaken && (
-            <HolderTable holders={snapshotHolders} className="mt-6" />
-          )}
-        </StepCard>
 
-        {/* ===== Step 2: Collect Rewards ===== */}
-        <StepCard
-          step={2}
-          title="Collect Rewards"
-          subtitle="Specify how many reward tokens to collect, plus an optional extra fee."
-          active={step === "rewards"}
-          done={rewardsCollected}
-          disabled={!snapshotTaken || snapshotHolders.length === 0}
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Reward Tokens to Collect
-              </label>
-              <input
-                type="number"
-                className="glass-input"
-                value={rewardAmount}
-                onChange={(e) => setRewardAmount(Number(e.target.value))}
-                min={0}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Extra Fee (%)
-              </label>
-              <input
-                type="number"
-                className="glass-input"
-                value={extraFeePercent}
-                onChange={(e) =>
-                  setExtraFeePercent(
-                    Math.min(100, Math.max(0, Number(e.target.value)))
-                  )
-                }
-                min={0}
-                max={100}
-                step={0.1}
-              />
+            {error && <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">{error}</div>}
+
+            <div className="flex gap-3">
+              <button className="btn-secondary flex-1" onClick={() => setStep("split")}>← Back</button>
+              <button className="btn-primary flex-1" onClick={generateJob}>⚡ Generate Job</button>
             </div>
           </div>
-          <div className="mt-3">
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Reward Token Mint
-            </label>
-            <input
-              className="glass-input font-mono text-sm"
-              value={rewardMint}
-              onChange={(e) => setRewardMint(e.target.value)}
-              placeholder="SPL mint of the reward token (e.g. USDC, SOL…)"
-            />
-          </div>
-          <div className="mt-3 p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
-            <div className="flex justify-between">
-              <span>Collected</span>
-              <span className="text-white font-mono">
-                {rewardAmount.toLocaleString()} RFLCT
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Fee ({extraFeePercent}%)</span>
-              <span className="text-rose-400 font-mono">
-                −{(rewardAmount * extraFeePercent) / 100} RFLCT
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-slate-700/40 pt-1">
-              <span>After fee</span>
-              <span className="text-emerald-400 font-mono font-semibold">
-                {afterFee.toLocaleString()} RFLCT
-              </span>
-            </div>
-          </div>
-          <button
-            className="btn-primary w-full mt-4"
-            onClick={collectRewards}
-            disabled={rewardsCollected || !snapshotTaken}
-          >
-            {rewardsCollected ? "✓ Rewards Collected" : "Collect Rewards"}
-          </button>
-        </StepCard>
+        </div>
 
-        {/* ===== Step 3: Swap & Burn ===== */}
-        <StepCard
-          step={3}
-          title="Swap & Burn"
-          subtitle="Rewards are split: one portion buys your token and burns it, the rest buys a reward token for holders."
-          active={step === "burn"}
-          done={burnComplete && swapsExecuted}
-          disabled={!rewardsCollected}
-        >
-          {!burnComplete ? (
-            <div className="space-y-4">
-              {/* Split slider */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Burn split:{" "}
-                  <span className="text-rose-400 font-bold">{splitPercent}%</span>
-                  {" "}to burn ·{" "}
-                  <span className="text-emerald-400 font-bold">{100 - splitPercent}%</span>
-                  {" "}to distribute
-                </label>
-                <input
-                  type="range"
-                  min={0} max={100} step={1}
-                  value={splitPercent}
-                  onChange={(e) => setSplitPercent(Number(e.target.value))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-slate-500 mt-1">
-                  <span>0% burn</span><span>50/50</span><span>100% burn</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Your Token Mint (to burn)
-                  </label>
-                  <input
-                    className="glass-input font-mono text-sm"
-                    value={burnTokenMint}
-                    onChange={(e) => setBurnTokenMint(e.target.value)}
-                    placeholder="Mint of token to buy & burn…"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Reward Token Mint (to distribute)
-                  </label>
-                  <input
-                    className="glass-input font-mono text-sm"
-                    value={distTokenMint}
-                    onChange={(e) => setDistTokenMint(e.target.value)}
-                    placeholder="Mint of token to distribute…"
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
-                <div className="flex justify-between">
-                  <span>After fee</span>
-                  <span className="text-white font-mono">{afterFee.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>→ Burn pool ({splitPercent}%)</span>
-                  <span className="text-rose-400 font-mono">{(afterFee * splitPercent / 100).toLocaleString()} 🔥</span>
-                </div>
-                <div className="flex justify-between border-t border-slate-700/40 pt-1">
-                  <span>→ Distribute pool ({100 - splitPercent}%)</span>
-                  <span className="text-emerald-400 font-mono font-semibold">{(afterFee * (100 - splitPercent) / 100).toLocaleString()}</span>
-                </div>
-              </div>
-              <button
-                className="btn-primary w-full"
-                onClick={executeBurn}
-                disabled={!rewardsCollected}
-              >
-                Confirm Split
-              </button>
-            </div>
-          ) : (
-            /* ── Post-confirm: Jupiter quotes & execute ── */
-            <div className="space-y-4">
-              {/* Summary of split */}
-              <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400 space-y-2">
-                <div className="flex justify-between">
-                  <span>Reward token</span>
-                  <code className="text-brand-300">{rewardMint.slice(0, 8)}…</code>
-                </div>
-                <div className="flex justify-between">
-                  <span>Burn pool</span>
-                  <span className="text-rose-400">{(afterFee * splitPercent / 100).toLocaleString()} → {burnTokenMint ? burnTokenMint.slice(0, 8) + '…' : '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Dist pool</span>
-                  <span className="text-emerald-400">{(afterFee * (100 - splitPercent) / 100).toLocaleString()} → {distTokenMint ? distTokenMint.slice(0, 8) + '…' : '—'}</span>
-                </div>
-              </div>
-
-              {/* Jupiter quote previews */}
-              <div className="grid grid-cols-2 gap-3">
-                {burnTokenMint && splitPercent > 0 && (
-                  <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-xs space-y-1">
-                    <p className="font-medium text-rose-300">🔥 Burn Swap</p>
-                    {burnQuote ? (
-                      <>
-                        <p className="text-slate-400">You receive: <span className="text-white font-mono">{burnQuote.outAmount}</span></p>
-                        <p className="text-slate-500">Impact: {burnQuote.priceImpactPct}%</p>
-                      </>
-                    ) : (
-                      <p className="text-slate-500">Loading quote…</p>
-                    )}
-                  </div>
-                )}
-                {distTokenMint && splitPercent < 100 && (
-                  <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 text-xs space-y-1">
-                    <p className="font-medium text-emerald-300">🎁 Distribute Swap</p>
-                    {distQuote ? (
-                      <>
-                        <p className="text-slate-400">You receive: <span className="text-white font-mono">{distQuote.outAmount}</span></p>
-                        <p className="text-slate-500">Impact: {distQuote.priceImpactPct}%</p>
-                      </>
-                    ) : (
-                      <p className="text-slate-500">Loading quote…</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Swap errors */}
-              {(swapError || burnError) && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm">
-                  {swapError || burnError}
-                </div>
-              )}
-
-              {/* Swap button */}
-              {!swapsExecuted ? (
-                <button
-                  className="btn-primary w-full"
-                  onClick={executeSwaps}
-                  disabled={swapping || burning || !connected}
-                >
-                  {!connected
-                    ? "Connect wallet to execute"
-                    : swapping || burning
-                    ? "Executing swaps…"
-                    : "Execute Swaps"}
-                </button>
-              ) : (
-                <div className="space-y-2">
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 space-y-1">
-                    <p className="font-medium">✓ Swaps executed</p>
-                    {burnTxid && <p className="font-mono text-[10px]">Burn tx: {burnTxid.slice(0, 20)}…</p>}
-                    {distTxid && <p className="font-mono text-[10px]">Dist tx: {distTxid.slice(0, 20)}…</p>}
-                  </div>
-                  <button className="btn-primary w-full" onClick={() => setStep("distribute")}>
-                    Continue to Distribute →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </StepCard>
-
-        {/* ===== Step 4: Distribute ===== */}
-        <StepCard
-          step={4}
-          title="Distribute to Holders"
-          subtitle={`Swap ${afterFee * (100 - splitPercent) / 100} reward tokens → ${distTokenMint ? distTokenMint.slice(0,8)+'…' : 'reward token'} → distribute to snapshot holders.`}
-          active={step === "distribute"}
-          done={distributionDone}
-          disabled={!burnComplete || eligibleHolders.length === 0}
-        >
-          {/* Dual sliders */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Exclude top holders:{" "}
-                <span className="text-brand-400 font-bold">{excludeTop}%</span>
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={50}
-                value={excludeTop}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setExcludeTop(v);
-                  if (v + excludeBottom > 50) setExcludeBottom(50 - v);
-                }}
-                className="w-full from-slider"
-              />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
-                <span>All included</span>
-                <span>Exclude half</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Exclude bottom holders:{" "}
-                <span className="text-purple-400 font-bold">
-                  {excludeBottom}%
-                </span>
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={50}
-                value={excludeBottom}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setExcludeBottom(v);
-                  if (v + excludeTop > 50) setExcludeTop(50 - v);
-                }}
-                className="w-full to-slider"
-              />
-              <div className="flex justify-between text-xs text-slate-500 mt-1">
-                <span>All included</span>
-                <span>Exclude half</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Summary */}
-          <div className="mt-4 p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400 space-y-1">
-            <div className="flex justify-between">
-              <span>Total holders</span>
-              <span className="text-white">{snapshotHolders.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Excluded</span>
-              <span className="text-yellow-400">{totalExcluded}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Eligible</span>
-              <span className="text-emerald-400 font-semibold">
-                {eligibleHolders.length}
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-slate-700/40 pt-1">
-              <span>Per-holder pool</span>
-              <span className="text-brand-300 font-mono">
-                {afterBurn.toLocaleString()} RFLCT
-              </span>
-            </div>
-          </div>
-
-          {/* Distribution preview */}
-          {distribution.length > 0 && (
-            <div className="mt-4 max-h-48 overflow-y-auto rounded-xl border border-slate-700/30">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-surface-800 text-slate-400">
-                  <tr>
-                    <th className="text-left py-2 px-3">Holder</th>
-                    <th className="text-right py-2 px-3">Share</th>
-                    <th className="text-right py-2 px-3">Receives</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {distribution.map((h, i) => (
-                    <tr
-                      key={h.address + i}
-                      className={i % 2 === 0 ? "bg-surface-800/30" : ""}
-                    >
-                      <td className="py-2 px-3 font-mono text-xs text-slate-500">
-                        {h.address}
-                      </td>
-                      <td className="py-2 px-3 text-right text-slate-300">
-                        {h.percentage.toFixed(2)}%
-                      </td>
-                      <td className="py-2 px-3 text-right text-emerald-400 font-mono text-xs">
-                        {h.receive.toFixed(2)} RFLCT
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <button
-            className="btn-primary w-full mt-4"
-            onClick={executeDistribution}
-            disabled={distributionDone || !burnComplete}
-          >
-            {distributionDone
-              ? "✓ Distribution Complete"
-              : "Distribute Reflections"}
-          </button>
-        </StepCard>
-
-        {/* ===== Done ===== */}
+        {/* ══════════ Done ══════════ */}
         {step === "done" && (
           <div className="glass-card p-8 text-center space-y-5">
             <div className="text-5xl">🎉</div>
-            <h2 className="text-2xl font-bold text-white">
-              Reflection Complete!
-            </h2>
-            <p className="text-slate-400 max-w-md mx-auto">
-              {afterBurn.toLocaleString()} RFLCT distributed across{" "}
-              {eligibleHolders.length} holders.
-              {splitPercent > 0 &&
-                ` ${((afterFee * splitPercent) / 100).toLocaleString()} RFLCT swapped → your token → 🔥 burned.`}
-              {extraFeePercent > 0 &&
-                ` ${((rewardAmount * extraFeePercent) / 100).toLocaleString()} RFLCT collected as fee.`}
+            <h2 className="text-2xl font-bold text-white">Reflector Job Ready</h2>
+            <p className="text-slate-400 max-w-md mx-auto text-sm">
+              Source: <code className="text-brand-300">{sourceMint.slice(0, 8)}…</code> → {rules.length} rules → every {cronExpr}
             </p>
 
-            {/* Cron / API section */}
-            <div className="mt-4 p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-left">
-              <p className="text-xs font-semibold text-slate-300 mb-2 flex items-center gap-2">
-                ⏱️ Schedule this reflection
-              </p>
-              <p className="text-xs text-slate-500 mb-3">
-                Copy this command and hand it to your Hermes agent — it hits the API endpoint
-                that re-runs the full snapshot → rewards → burn → distribution on any schedule.
-              </p>
-              <div className="relative">
+            <div className="text-left space-y-4">
+              <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30">
+                <p className="text-xs font-semibold text-slate-300 mb-2">📋 Job Config</p>
+                <pre className="bg-surface-950 border border-slate-700/50 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all max-h-64">{generatedSnippet}</pre>
+                <CopyButton text={generatedSnippet} />
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30">
+                <p className="text-xs font-semibold text-slate-300 mb-2">⏱️ Hermes Cron Command</p>
+                <p className="text-xs text-slate-500 mb-2">Paste this into Hermes to fire immediately (or hand it to a cron job):</p>
                 <pre className="bg-surface-950 border border-slate-700/50 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all">
 {`curl -s -X POST https://reflector-panel.vercel.app/api/reflect \\
   -H "Content-Type: application/json" \\
-  -d '{
-  "mint": "${tokenAddress}",
-  "network": "mainnet",
-  "rewardAmount": ${rewardAmount},
-  "extraFeePercent": ${extraFeePercent},
-  "splitPercent": ${splitPercent},
-  "burnTokenMint": "${burnTokenMint}",
-  "distTokenMint": "${distTokenMint}",
-  "excludeTop": ${excludeTop},
-  "excludeBottom": ${excludeBottom}
-}'`}
+  -d '${generatedSnippet.replace(/\n/g, "\\n")}'`}
                 </pre>
-                <CopyButton
-                  text={`curl -s -X POST https://reflector-panel.vercel.app/api/reflect \\
-  -H "Content-Type: application/json" \\
-  -d '{
-  "mint": "${tokenAddress}",
-  "network": "mainnet",
-  "rewardAmount": ${rewardAmount},
-  "extraFeePercent": ${extraFeePercent},
-  "splitPercent": ${splitPercent},
-  "burnTokenMint": "${burnTokenMint}",
-  "distTokenMint": "${distTokenMint}",
-  "excludeTop": ${excludeTop},
-  "excludeBottom": ${excludeBottom}
-}'`}
-                />
+                <CopyButton text={`curl -s -X POST https://reflector-panel.vercel.app/api/reflect -H "Content-Type: application/json" -d '${generatedSnippet.replace(/\n/g, "\\n")}'`} />
               </div>
             </div>
 
-            <button className="btn-secondary" onClick={resetAll}>
-              ← Start New Reflection
-            </button>
+            <button className="btn-secondary" onClick={resetAll}>← Start New</button>
           </div>
         )}
-        {/* ===== Auto‑Distribute Panel ===== */}
-        <div className="glass-card p-6">
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-amber-500/20 text-amber-400">
-              ⚡
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Auto-Distribute</h3>
-              <p className="text-sm text-slate-400">
-                Watches a wallet balance and triggers distribution automatically when the threshold is met.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Enable toggle */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoEnabled}
-                onChange={(e) => setAutoEnabled(e.target.checked)}
-                className="w-5 h-5 rounded border-slate-600 bg-surface-800 accent-amber-500"
-              />
-              <span className="text-sm font-medium text-slate-300">
-                {autoEnabled ? "🟢 Auto-distribute enabled" : "⚪ Auto-distribute disabled"}
-              </span>
-            </label>
-
-            {autoEnabled && (
-              <>
-                {/* Wallet to monitor */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Monitor Wallet
-                  </label>
-                  <input
-                    className="glass-input font-mono text-sm"
-                    value={autoWallet}
-                    onChange={(e) => setAutoWallet(e.target.value)}
-                    placeholder="Wallet address holding reward tokens…"
-                  />
-                </div>
-
-                {/* Threshold */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Threshold ({autoThreshold.toLocaleString()} tokens)
-                  </label>
-                  <input
-                    type="range"
-                    min={1}
-                    max={10000}
-                    step={1}
-                    value={autoThreshold}
-                    onChange={(e) => setAutoThreshold(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>1</span><span>5,000</span><span>10,000</span>
-                  </div>
-                </div>
-
-                {/* Uses current reflection params */}
-                <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400 space-y-1">
-                  <p className="font-medium text-slate-300 mb-1">Distribution params (from current config):</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                    <span>Target: <code className="text-brand-300">{tokenAddress.slice(0, 8)}…</code></span>
-                    <span>Rewards: {rewardAmount.toLocaleString()}</span>
-                    <span>Fee: {extraFeePercent}%</span>
-                    <span>Split: {splitPercent}%</span>
-                    <span>Exclude top: {excludeTop}%</span>
-                    <span>Exclude bottom: {excludeBottom}%</span>
-                  </div>
-                </div>
-
-                {/* Save button */}
-                <button
-                  className="btn-primary w-full"
-                  onClick={saveAutoConfig}
-                  disabled={autoSaving || !autoWallet.trim()}
-                >
-                  {autoSaving ? "Saving…" : autoSaved ? "✓ Saved!" : "💾 Save Auto-Distribute Config"}
-                </button>
-
-                {/* Snippet display */}
-                {autoSnippet && (
-                  <div className="relative">
-                    <p className="text-xs text-slate-500 mb-2">
-                      Save this to <code className="text-amber-300">~/.hermes/scripts/auto-reflect-jobs.json</code> and the poller picks it up.
-                    </p>
-                    <pre className="bg-surface-950 border border-slate-700/50 rounded-lg p-3 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap break-all max-h-48">
-                      {autoSnippet}
-                    </pre>
-                    <CopyButton text={autoSnippet} />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
       </section>
     </main>
   );
 }
 
-/* ================================================================== */
-/*  Sub-components                                                     */
-/* ================================================================== */
-
-function StepsIndicator({ step }: { step: Step }) {
-  const steps: { key: Step; label: string }[] = [
-    { key: "snapshot", label: "Snapshot" },
-    { key: "rewards", label: "Rewards" },
-    { key: "burn", label: "Burn" },
-    { key: "distribute", label: "Distribute" },
-    { key: "done", label: "Done" },
-  ];
-  const currentIdx = steps.findIndex((s) => s.key === step);
-  return (
-    <div className="hidden sm:flex items-center gap-1">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-1">
-          <div
-            className={`text-xs px-2 py-1 rounded-lg font-medium transition-colors ${
-              i === currentIdx
-                ? "bg-brand-600/30 text-brand-300"
-                : i < currentIdx
-                ? "bg-emerald-600/20 text-emerald-400"
-                : "bg-transparent text-slate-600"
-            }`}
-          >
-            {i < currentIdx ? "✓" : ""} {s.label}
-          </div>
-          {i < steps.length - 1 && <div className="w-3 h-px bg-slate-700" />}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StepCard({
-  step: stepNum,
-  title,
-  subtitle,
-  active,
-  done,
-  disabled,
-  children,
-}: {
-  step: number;
-  title: string;
-  subtitle: string;
-  active: boolean;
-  done: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`glass-card p-6 transition-all duration-300 ${
-        disabled ? "opacity-40 pointer-events-none" : ""
-      } ${active ? "ring-2 ring-brand-500/40 shadow-brand-500/10" : ""}`}
-    >
-      <div className="flex items-start gap-4 mb-5">
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 transition-all ${
-            done
-              ? "bg-emerald-500/20 text-emerald-400"
-              : active
-              ? "bg-brand-500/20 text-brand-400"
-              : "bg-surface-800 text-slate-600"
-          }`}
-        >
-          {done ? "✓" : stepNum}
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
-          <p className="text-sm text-slate-400">{subtitle}</p>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function HolderTable({
-  holders,
-  className,
-}: {
-  holders: Holder[];
-  className?: string;
-}) {
-  return (
-    <div className={`${className ?? ""}`}>
-      <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-700/30">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-surface-800 text-slate-400">
-            <tr>
-              <th className="text-left py-2 px-3">Holder</th>
-              <th className="text-right py-2 px-3">Balance</th>
-              <th className="text-right py-2 px-3">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {holders.map((h, i) => (
-              <tr
-                key={h.address + i}
-                className={i % 2 === 0 ? "bg-surface-800/30" : ""}
-              >
-                <td className="py-2 px-3 font-mono text-xs text-slate-500">
-                  {h.address}
-                </td>
-                <td className="py-2 px-3 text-right text-slate-300">
-                  {h.balance.toLocaleString()}
-                </td>
-                <td className="py-2 px-3 text-right text-slate-400">
-                  {h.percentage}%
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
+/* ─────────────────────────────────────────────────────────────────── */
+/*  Copy button                                                        */
+/* ─────────────────────────────────────────────────────────────────── */
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      onClick={() => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
       className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-brand-600/30 border border-brand-500/30 text-brand-300 text-[11px] font-medium hover:bg-brand-600/50 transition-all"
     >
       {copied ? "Copied!" : "Copy"}
