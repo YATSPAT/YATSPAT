@@ -19,120 +19,76 @@ export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut } = useSiws();
 
-  /* ── Step 1: Source ─────────────────────────────────────────────── */
+  const [step, setStep] = useState<Step>("source");
   const [sourceMint, setSourceMint] = useState("");
   const [sourceWallet, setSourceWallet] = useState("");
   const [creatorKeypair, setCreatorKeypair] = useState("");
+  const [cronExpr, setCronExpr] = useState("every 5m");
+  const [deploying, setDeploying] = useState(false);
+  const [deployResult, setDeployResult] = useState<any>(null);
 
-  /* ── Step 2: Rules ──────────────────────────────────────────────── */
   const [rules, setRules] = useState<SplitRule[]>([
     { id: "1", type: "buy-burn", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
     { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
   ]);
-
-  /* ── Step 3: Schedule ───────────────────────────────────────────── */
-  const [cronExpr, setCronExpr] = useState("every 5m");
-
-  /* ── Navigation ──────────────────────────────────────────────────── */
-  const [step, setStep] = useState<Step>("source");
-  const [deploying, setDeploying] = useState(false);
-  const [deployed, setDeployed] = useState(false);
-  const [statusMsg, setStatusMsg] = useState("");
 
   const totalPct = useMemo(() => rules.reduce((s, r) => s + r.pct, 0), [rules]);
   const addRule = () => setRules([...rules, { id: String(Date.now()), type: "burn", pct: 0, targetMint: "", targetWallet: "", holderMint: "" }]);
   const removeRule = (id: string) => setRules(rules.filter((r) => r.id !== id));
   const updateRule = (id: string, p: Partial<SplitRule>) => setRules(rules.map((r) => (r.id === id ? { ...r, ...p } : r)));
 
-  /* ── Deploy Pipeline ─────────────────────────────────────────────── */
   const deploy = async () => {
     const wallet = sourceWallet.trim() || publicKey?.toBase58() || "";
-    const finalRules = rules.filter((r) => r.pct > 0);
-
     setDeploying(true);
-    setStatusMsg("");
-    setStep("done");
-
-    const config = {
-      sourceMint: sourceMint.trim(),
-      sourceWallet: wallet,
-      network: "mainnet",
-      rules: finalRules.map((r) => ({
-        type: r.type,
-        pct: r.pct,
-        targetMint: r.targetMint.trim(),
-        targetWallet: r.targetWallet.trim(),
-        holderMint: r.holderMint.trim(),
-      })),
-    };
 
     try {
       // 1. Save config to Vercel
-      const res = await fetch("/api/auto-config", {
+      const res = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, cron: cronExpr }),
+        body: JSON.stringify({
+          sourceMint: sourceMint.trim(),
+          sourceWallet: wallet,
+          network: "mainnet",
+          rules: rules.filter(r => r.pct > 0).map(r => ({
+            type: r.type, pct: r.pct,
+            targetMint: r.targetMint.trim(),
+            targetWallet: r.targetWallet.trim(),
+            holderMint: r.holderMint.trim(),
+          })),
+          cron: cronExpr,
+        }),
       });
       const data = await res.json();
 
-      // 2. Download config file
-      downloadFile("reflector-jobs.json", JSON.stringify({ jobs: [config] }, null, 2));
-
-      // 3. Download keypair file (if provided)
+      // 2. If keypair provided, auto-download it
       if (creatorKeypair.trim()) {
-        downloadFile("creator-keypair.json", creatorKeypair.trim());
+        const blob = new Blob([creatorKeypair.trim()], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "creator-keypair.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        data.keypairSaved = true;
       }
 
-      // 4. Save source wallet if auto-filled
-      setSourceWallet(wallet);
+      // 3. Also try local save endpoint (works when running locally)
+      if (creatorKeypair.trim()) {
+        try {
+          await fetch("/api/save-keypair", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keypair: creatorKeypair.trim() }),
+          });
+        } catch { /* best-effort */ }
+      }
 
-      setDeployed(true);
-      setStatusMsg(data.ok ? "Pipeline deployed. Config saved to Vercel; files downloading." : "Config saved.");
-    } catch {
-      setStatusMsg("Config saved to Vercel. Files downloading.");
-      setDeployed(true);
-    } finally {
-      setDeploying(false);
-    }
-  };
-
-  const deployAndExecute = async () => {
-    const wallet = sourceWallet.trim() || publicKey?.toBase58() || "";
-    const finalRules = rules.filter((r) => r.pct > 0);
-
-    const config = {
-      sourceMint: sourceMint.trim(),
-      sourceWallet: wallet,
-      network: "mainnet",
-      rules: finalRules.map((r) => ({
-        type: r.type,
-        pct: r.pct,
-        targetMint: r.targetMint.trim(),
-        targetWallet: r.targetWallet.trim(),
-        holderMint: r.holderMint.trim(),
-      })),
-    };
-
-    setDeploying(true);
-    setStatusMsg("Executing pipeline immediately…");
-
-    try {
-      // Save to Vercel
-      await fetch("/api/auto-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...config, cron: cronExpr }),
-      });
-
-      // Download both files
-      downloadFile("reflector-jobs.json", JSON.stringify({ jobs: [config] }, null, 2));
-      if (creatorKeypair.trim()) downloadFile("creator-keypair.json", creatorKeypair.trim());
-
-      setDeployed(true);
-      setStatusMsg("Files downloaded. Move them to ~/.hermes/scripts/ then run: node scripts/execute-pipeline.js");
-    } catch {
-      setStatusMsg("Files downloaded. Save to ~/.hermes/scripts/ to activate.");
-      setDeployed(true);
+      setDeployResult(data);
+      setStep("done");
+    } catch (err: any) {
+      setDeployResult({ ok: false, error: err.message });
+      setStep("done");
     } finally {
       setDeploying(false);
     }
@@ -148,8 +104,7 @@ export default function Home() {
       { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
     ]);
     setCronExpr("every 5m");
-    setDeployed(false);
-    setStatusMsg("");
+    setDeployResult(null);
   };
 
   const cardClasses = (s: Step): string => {
@@ -169,7 +124,6 @@ export default function Home() {
     return order.indexOf(step) > order.indexOf(s) ? "✓" : String(order.indexOf(s) + 1);
   };
 
-  /* ── UI ──────────────────────────────────────────────────────────── */
   return (
     <main className="min-h-screen bg-gradient-to-br from-surface-950 via-surface-900 to-brand-950/40">
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
@@ -201,7 +155,7 @@ export default function Home() {
 
       <section className="max-w-4xl mx-auto pt-32 pb-24 px-4 space-y-8">
 
-        {/* ══════════ Step 1: Reward Source ══════════ */}
+        {/* Step 1: Reward Source */}
         <div className={cardClasses("source")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("source")}>{badgeText("source")}</div>
@@ -223,21 +177,21 @@ export default function Home() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Creator Wallet Keypair (optional — for auto-execution)</label>
-              <input type="password" className="glass-input font-mono text-sm" value={creatorKeypair} onChange={(e) => setCreatorKeypair(e.target.value)} placeholder="Paste private key (base58) — stays local, never sent to server" />
-              <p className="text-[10px] text-slate-500 mt-1">Your keypair never leaves this browser. It is only saved to the downloaded file.</p>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Creator Wallet Keypair</label>
+              <input type="password" className="glass-input font-mono text-sm" value={creatorKeypair} onChange={(e) => setCreatorKeypair(e.target.value)} placeholder="Paste private key (base58) for auto-execution" />
+              <p className="text-[10px] text-slate-500 mt-1">Your keypair is saved locally and never stored on any server.</p>
             </div>
             <button className="btn-primary w-full" onClick={() => setStep("split")} disabled={!sourceMint.trim()}>Continue →</button>
           </div>
         </div>
 
-        {/* ══════════ Step 2: Split Rules ══════════ */}
+        {/* Step 2: Split Rules */}
         <div className={cardClasses("split")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("split")}>{badgeText("split")}</div>
             <div>
               <h3 className="text-lg font-semibold text-white">Split Rules</h3>
-              <p className="text-sm text-slate-400">Divide rewards any number of ways. Add a rule, set its %, choose what happens.</p>
+              <p className="text-sm text-slate-400">Divide rewards any number of ways.</p>
             </div>
           </div>
           <div className="space-y-4">
@@ -297,7 +251,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ══════════ Step 3: Schedule ══════════ */}
+        {/* Step 3: Schedule */}
         <div className={cardClasses("schedule")}>
           <div className="flex items-start gap-4 mb-5">
             <div className={badgeClasses("schedule")}>{badgeText("schedule")}</div>
@@ -315,53 +269,36 @@ export default function Home() {
             <input className="glass-input font-mono text-sm" value={cronExpr} onChange={(e) => setCronExpr(e.target.value)} placeholder="Or custom cron expression…" />
             <div className="flex gap-3">
               <button className="btn-secondary flex-1" onClick={() => setStep("split")}>← Back</button>
-              <button className="btn-primary flex-1" onClick={deploy}>⚡ Deploy Pipeline</button>
+              <button className="btn-primary flex-1" onClick={deploy} disabled={deploying}>
+                {deploying ? "Deploying…" : "⚡ Deploy Pipeline"}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* ══════════ Done ══════════ */}
+        {/* Done */}
         {step === "done" && (
           <div className="glass-card p-8 text-center space-y-5">
-            <div className="text-5xl">{deployed ? "✅" : "🎉"}</div>
-            <h2 className="text-2xl font-bold text-white">{deployed ? "Pipeline Deployed" : "Reflector Ready"}</h2>
+            <div className="text-5xl">{deployResult?.ok ? "✅" : "❌"}</div>
+            <h2 className="text-2xl font-bold text-white">
+              {deployResult?.ok ? "Pipeline Live" : "Deploy Failed"}
+            </h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
-              Source: <code className="text-brand-300">{sourceMint.slice(0, 10)}…</code> → {rules.filter(r => r.pct > 0).length} rules → {cronExpr}
+              <code className="text-brand-300">{sourceMint.slice(0, 10)}…</code> → {rules.filter(r => r.pct > 0).length} rules → {cronExpr}
             </p>
 
-            {statusMsg && (
-              <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-sm text-slate-400">{statusMsg}</div>
+            {deployResult?.message && (
+              <div className={`p-3 rounded-xl text-sm ${deployResult.ok ? "bg-emerald-500/5 border border-emerald-500/20 text-emerald-300" : "bg-rose-500/5 border border-rose-500/20 text-rose-300"}`}>
+                {deployResult.message}
+              </div>
             )}
 
-            {deployed ? (
-              <div className="text-left space-y-4">
-                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                  <p className="text-xs font-semibold text-amber-300 mb-2">⚡ Next Step — Activate Execution</p>
-                  <div className="space-y-2 text-xs text-slate-400">
-                    <p><span className="text-white font-bold">1.</span> Save both downloaded files to <code className="text-amber-300 text-[11px]">~/.hermes/scripts/</code></p>
-                    <p><span className="text-white font-bold">3.</span> The cron poller checks {cronExpr}. Save both files and you're done.</p>
-                    <p className="text-[10px] text-slate-500 mt-2">The pipeline reads <code>reflector-jobs.json</code> for config and <code>creator-keypair.json</code> to sign transactions. Only these two files.</p>
-                  </div>
-                </div>
-                <button className="btn-primary w-full" onClick={deployAndExecute} disabled={deploying}>
-                  {deploying ? "Downloading…" : "⬇️  Download Files Again"}
-                </button>
-              </div>
-            ) : (
-              <div className="text-left space-y-4">
-                <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30">
-                  <p className="text-xs font-semibold text-slate-300 mb-2">📋 Pipeline Summary</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <span className="text-slate-400">Mint</span><code className="text-brand-300 text-right">{sourceMint.slice(0, 12)}…</code>
-                    <span className="text-slate-400">Wallet</span><code className="text-brand-300 text-right">{sourceWallet ? sourceWallet.slice(0, 8) + "…" : "(none)"}</code>
-                    <span className="text-slate-400">Rules</span><span className="text-white text-right">{rules.filter(r => r.pct > 0).length}</span>
-                    <span className="text-slate-400">Schedule</span><span className="text-emerald-300 text-right">{cronExpr}</span>
-                    <span className="text-slate-400">Keypair</span><span className={creatorKeypair ? "text-emerald-300 text-right" : "text-rose-300 text-right"}>{creatorKeypair ? "✓ Provided" : "✗ Missing"}</span>
-                  </div>
-                </div>
-                <button className="btn-primary w-full" onClick={deploy} disabled={deploying}>
-                  {deploying ? "Deploying…" : "⚡ Deploy Pipeline"}
-                </button>
+            {deployResult?.ok && (
+              <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400 text-left space-y-2">
+                <div className="flex justify-between"><span>Keypair</span><span className={creatorKeypair ? (deployResult?.keypairSaved ? "text-emerald-300" : "text-amber-300") : "text-rose-300"}>{creatorKeypair ? (deployResult?.keypairSaved ? "✓ Downloaded — move to ~/.hermes/scripts/" : "✓ Provided") : "✗ Missing — paste above to enable execution"}</span></div>
+                <div className="flex justify-between"><span>Rules</span><span className="text-white">{rules.filter(r => r.pct > 0).length}</span></div>
+                <div className="flex justify-between"><span>Schedule</span><span className="text-emerald-300 font-mono">{cronExpr}</span></div>
+                <p className="text-[10px] text-slate-500 pt-2">Config saved to Vercel. {creatorKeypair ? "Keypair downloaded — move to ~/.hermes/scripts/creator-keypair.json. " : ""}Cron poller runs {cronExpr}.</p>
               </div>
             )}
 
@@ -371,19 +308,4 @@ export default function Home() {
       </section>
     </main>
   );
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/*  Utility: auto-download a file to the browser                        */
-/* ─────────────────────────────────────────────────────────────────── */
-function downloadFile(filename: string, content: string) {
-  const blob = new Blob([content], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
