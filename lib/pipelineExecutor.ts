@@ -3,6 +3,7 @@ import {
   PublicKey,
   Keypair,
   Transaction,
+  VersionedTransaction,
   SystemProgram,
   ComputeBudgetProgram,
   sendAndConfirmTransaction,
@@ -64,10 +65,17 @@ async function jupiterSwap(keypair: Keypair, inputMint: string, outputMint: stri
     }),
   });
   const swapData = await swapRes.json();
-  if (!swapData.swapTransaction) throw new Error("No swap transaction returned");
+  if (!swapData.swapTransaction) throw new Error(`No swap transaction returned${swapData.error ? `: ${swapData.error}` : ""}`);
 
-  const tx = Transaction.from(Buffer.from(swapData.swapTransaction, "base64"));
-  const sig = await sendAndConfirmTransaction(connection, tx, [keypair], { commitment: "confirmed", skipPreflight: true });
+  // Jupiter returns a v0 VersionedTransaction — legacy Transaction.from() can't parse it.
+  const tx = VersionedTransaction.deserialize(Buffer.from(swapData.swapTransaction, "base64"));
+  tx.sign([keypair]);
+  const sig = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 3 });
+  const bh = await connection.getLatestBlockhash();
+  await connection.confirmTransaction(
+    { signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight },
+    "confirmed"
+  );
   return { txid: sig, outAmountRaw: Number(quoteData.outAmount) };
 }
 
