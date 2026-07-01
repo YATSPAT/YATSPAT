@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
+import LivePipelines from "../components/LivePipelines";
 import { SCHEDULE_PRESETS, formatInterval } from "../lib/schedule";
 
 type Step = "source" | "split" | "schedule" | "done";
@@ -588,6 +589,9 @@ export default function Home() {
                   <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400" style={{ width: `${((STEP_ORDER.indexOf(step === "done" ? "schedule" : step) + 1) / STEP_ORDER.length) * 100}%` }} />
                 </div>
               </div>
+            </div>
+            <div className="mt-4">
+              <LivePipelines />
             </div>
           </div>
         </div>
