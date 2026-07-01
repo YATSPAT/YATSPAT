@@ -5,6 +5,7 @@ const PUMPPORTAL_TRADE_LOCAL = "https://pumpportal.fun/api/trade-local";
 export interface ClaimResult {
   claimed: boolean;
   txid?: string;
+  claimedLamports?: number;
   error?: string;
 }
 
@@ -15,6 +16,7 @@ export interface ClaimResult {
    are returned, never thrown, so a claim hiccup never aborts the rest of the pipeline run. */
 export async function claimCreatorFees(connection: Connection, keypair: Keypair): Promise<ClaimResult> {
   try {
+    const beforeLamports = await connection.getBalance(keypair.publicKey, "confirmed");
     const res = await fetch(PUMPPORTAL_TRADE_LOCAL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,7 +45,8 @@ export async function claimCreatorFees(connection: Connection, keypair: Keypair)
       "confirmed"
     );
 
-    return { claimed: true, txid };
+    const afterLamports = await connection.getBalance(keypair.publicKey, "confirmed");
+    return { claimed: true, txid, claimedLamports: Math.max(0, afterLamports - beforeLamports) };
   } catch (err: any) {
     return { claimed: false, error: err?.message ?? String(err) };
   }

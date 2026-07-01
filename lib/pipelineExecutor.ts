@@ -20,6 +20,7 @@ import {
 import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
 import { claimCreatorFees } from "./pumpClaim";
+import { spendableClaimedRewardLamports } from "./rewardFunding";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
 const HELIUS_KEY = process.env.HELIUS_API_KEY || "";
@@ -410,12 +411,14 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       secret.startsWith("[") ? Uint8Array.from(JSON.parse(secret)) : bs58.decode(secret)
     );
 
-    // Step 0: claim Pump.fun creator fees (SOL) so there's something to split. Best-effort —
-    // a failed/empty claim (e.g. nothing accrued yet) never aborts the run; we proceed with
-    // whatever balance is already present.
+    let claimedLamports = 0;
+
+    // Step 0: claim Pump.fun creator fees (SOL). SOL-mode pipelines are allowed to spend only
+    // the net SOL increase from this claim, never existing wallet SOL.
     if (record.claimCreatorFees) {
       const claim = await claimCreatorFees(connection, keypair);
-      if (claim.claimed) results.push({ type: "claim", pct: 0, txid: claim.txid });
+      claimedLamports = claim.claimedLamports ?? 0;
+      if (claim.claimed) results.push({ type: "claim", pct: 0, txid: claim.txid, claimedLamports });
       else if (claim.error) results.push({ type: "claim", pct: 0, skipped: true, note: claim.error });
     }
 
@@ -425,9 +428,12 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     let lamports = 0;
 
     if (isSol) {
-      // SOL mode: the amount to split is the wallet's native SOL, minus a fee reserve.
+      // SOL mode: spend only rewards claimed in this run, minus a reserve left from those same
+      // rewards for swap/burn/distribution fees. Existing wallet SOL is never part of the split.
       lamports = await connection.getBalance(keypair.publicKey);
-      sourceBalance = Math.max(0, lamports - SOL_RESERVE_LAMPORTS);
+      sourceBalance = record.claimCreatorFees
+        ? spendableClaimedRewardLamports(claimedLamports, SOL_RESERVE_LAMPORTS)
+        : 0;
     } else {
       // SPL mode: the amount to split is the source token's ATA balance. Derive the ATA with the
       // mint's ACTUAL token program (legacy vs Token-2022) — defaulting to the legacy program here
@@ -452,7 +458,9 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       // exactly what makes "swaps don't happen, I think" impossible to diagnose.
       const summary =
         isSol && lamports > 0
-          ? `wallet holds ${(lamports / 1e9).toFixed(4)} SOL, at or below the ${(SOL_RESERVE_LAMPORTS / 1e9).toFixed(3)} SOL fee reserve — add more SOL so there's a spendable surplus to swap`
+          ? record.claimCreatorFees
+            ? `claimed ${(claimedLamports / 1e9).toFixed(6)} SOL this run, at or below the ${(SOL_RESERVE_LAMPORTS / 1e9).toFixed(3)} SOL reward fee reserve — existing wallet SOL untouched`
+            : "SOL source pipelines require reward claiming; existing wallet SOL is not spendable by the reward-only funding guard"
           : isSol
             ? "wallet SOL balance is 0 — nothing claimed to split yet"
             : "source-token balance is 0 — nothing to split yet";
