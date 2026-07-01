@@ -69,9 +69,19 @@ function describeError(err: unknown): string {
    (ATA derivation, transfer, burn) must target the mint's actual program or it fails with
    InvalidAccountData. ── */
 async function getTokenProgramId(mint: PublicKey): Promise<PublicKey> {
-  const info = await connection.getAccountInfo(mint);
-  if (info?.owner.equals(TOKEN_2022_PROGRAM_ID)) return TOKEN_2022_PROGRAM_ID;
-  return TOKEN_PROGRAM_ID;
+  // Retry on a null/failed lookup and throw if we can't determine it — silently defaulting to the
+  // legacy program on a transient RPC miss would build burn/transfer instructions for the wrong
+  // program and fail every tx with InvalidAccountData.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const info = await connection.getAccountInfo(mint);
+    if (info) {
+      if (info.owner.equals(TOKEN_2022_PROGRAM_ID)) return TOKEN_2022_PROGRAM_ID;
+      if (info.owner.equals(TOKEN_PROGRAM_ID)) return TOKEN_PROGRAM_ID;
+      throw new Error(`${mint.toBase58().slice(0, 8)}… is not an SPL mint (owner ${info.owner.toBase58()})`);
+    }
+    await sleep(400 * (attempt + 1));
+  }
+  throw new Error(`Could not fetch mint ${mint.toBase58().slice(0, 8)}… to determine its token program`);
 }
 
 /* ── Current token balance of an ATA (0 if the account doesn't exist yet). ── */
