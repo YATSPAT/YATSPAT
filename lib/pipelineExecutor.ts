@@ -432,7 +432,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       // rewards for swap/burn/distribution fees. Existing wallet SOL is never part of the split.
       lamports = await connection.getBalance(keypair.publicKey);
       sourceBalance = record.claimCreatorFees
-        ? spendableClaimedRewardLamports(claimedLamports, SOL_RESERVE_LAMPORTS)
+        ? spendableClaimedRewardLamports(claimedLamports, lamports, SOL_RESERVE_LAMPORTS)
         : 0;
     } else {
       // SPL mode: the amount to split is the source token's ATA balance. Derive the ATA with the
@@ -459,7 +459,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       const summary =
         isSol && lamports > 0
           ? record.claimCreatorFees
-            ? `claimed ${(claimedLamports / 1e9).toFixed(6)} SOL this run, at or below the ${(SOL_RESERVE_LAMPORTS / 1e9).toFixed(3)} SOL reward fee reserve — existing wallet SOL untouched`
+            ? `claimed ${(claimedLamports / 1e9).toFixed(6)} SOL this run, but wallet must keep at least ${(SOL_RESERVE_LAMPORTS / 1e9).toFixed(3)} SOL for fees — existing wallet SOL untouched`
             : "SOL source pipelines require reward claiming; existing wallet SOL is not spendable by the reward-only funding guard"
           : isSol
             ? "wallet SOL balance is 0 — nothing claimed to split yet"
