@@ -82,7 +82,7 @@ function ruleHud(rule: SplitRule, field: "type" | "pct" | "target", index: numbe
     return {
       crumb,
       title: "Snapshot Holders Of",
-      body: "Rewards are split proportionally across every wallet holding this token at execution time.",
+      body: "Rewards go to the top holders of this token, split proportionally by balance. The number of recipients scales with the size of each drop — roughly one holder per 0.02 SOL of claimed fees, up to 100 — so small drops stay efficient and big drops reach wide.",
       example: "e.g. your project's main token mint.",
     };
   }

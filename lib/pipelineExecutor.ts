@@ -21,6 +21,7 @@ import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
 import { claimCreatorFees } from "./pumpClaim";
 import { spendableClaimedRewardLamports } from "./rewardFunding";
+import { planDistribution, ATA_COST_LAMPORTS } from "./distributionBuckets";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
 const HELIUS_KEY = process.env.HELIUS_API_KEY || "";
@@ -332,7 +333,11 @@ async function getTokenHoldersFallback(mint: string): Promise<{ owner: string; a
   return accounts;
 }
 
-async function getTokenHolders(mint: string, excludeOwner?: PublicKey): Promise<TokenHolder[]> {
+async function getTokenHolders(
+  mint: string,
+  excludeOwner?: PublicKey,
+  limit: number = MAX_DISTRIBUTE_RECIPIENTS
+): Promise<TokenHolder[]> {
   // Prefer Helius for reliable pagination; fall back to standard Solana RPC.
   let rawAccounts: { owner: string; amount: string }[] = [];
   try {
@@ -360,7 +365,7 @@ async function getTokenHolders(mint: string, excludeOwner?: PublicKey): Promise<
   // Take the largest N holders, then split the pool proportionally among just those.
   const topHolders = eligible
     .sort((a, b) => (a.balanceRaw === b.balanceRaw ? 0 : a.balanceRaw > b.balanceRaw ? -1 : 1))
-    .slice(0, MAX_DISTRIBUTE_RECIPIENTS);
+    .slice(0, Math.max(1, limit));
   const total = topHolders.reduce((sum, h) => sum + h.balanceRaw, 0n);
   return topHolders.map((h) => ({
     address: h.owner,
@@ -415,17 +420,37 @@ async function executeRule(
       const mintPk = new PublicKey(rule.targetMint);
       const programId = await getTokenProgramId(mintPk);
       const srcAta = await getAssociatedTokenAddress(mintPk, keypair.publicKey, false, programId);
+
+      // SOL mode: bucket the drop — recipient count scales with the fee pool, and each recipient's
+      // worst-case ATA rent is carved out of the pool BEFORE the swap so the distribution can pay
+      // for its own account creation. SPL mode has no lamport-denominated pool; use the flat cap.
+      let recipientLimit = MAX_DISTRIBUTE_RECIPIENTS;
+      let swapAmountRaw = ruleAmountRaw;
+      let bucket: { recipients: number; rentBudgetLamports: number; swapLamports: number } | null = null;
+      if (isSol) {
+        bucket = planDistribution(ruleAmountRaw);
+        if (!bucket) {
+          return {
+            type: "distribute", pct: rule.pct, skipped: true,
+            note: `pool of ${(ruleAmountRaw / 1e9).toFixed(6)} SOL is below the minimum bucket (needs ~${((2 * ATA_COST_LAMPORTS) / 1e9).toFixed(4)} SOL)`,
+          };
+        }
+        recipientLimit = bucket.recipients;
+        swapAmountRaw = bucket.swapLamports;
+      }
+
       const pre = await ataBalance(srcAta, programId);
-      const swapResult = await jupiterSwap(keypair, sourceMint, rule.targetMint, ruleAmountRaw);
+      const swapResult = await jupiterSwap(keypair, sourceMint, rule.targetMint, swapAmountRaw);
       const received = swapResult.actualOutAmountRaw ?? await waitForAtaDelta(srcAta, programId, pre);
 
-      const holders = await getTokenHolders(rule.holderMint, keypair.publicKey);
+      const holders = await getTokenHolders(rule.holderMint, keypair.publicKey, recipientLimit);
       const distResults = received > 0n ? await distributeTokens(keypair, mintPk, srcAta, programId, holders, received) : [];
 
       return {
         type: "distribute", pct: rule.pct,
-        swappedRaw: ruleAmountRaw, receivedRaw: received.toString(),
+        swappedRaw: swapAmountRaw, receivedRaw: received.toString(),
         swapTxid: swapResult.txid, totalHolders: holders.length, distributed: distResults.length,
+        ...(bucket ? { bucket: { recipients: bucket.recipients, rentBudgetLamports: bucket.rentBudgetLamports } } : {}),
         distributions: distResults.slice(0, 20),
       };
     }
