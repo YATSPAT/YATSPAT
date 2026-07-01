@@ -26,7 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const result = await runPipeline(record);
     await recordRun(record.id, {
       status: result.ok ? "success" : "error",
-      summary: result.ok ? `${result.results.length} rules executed` : result.error || "unknown error",
+      // Prefer the pipeline's own reason (e.g. "below fee reserve", "no token account") over a bare
+      // rule count, so a run that swapped nothing records WHY instead of a misleading "0 rules".
+      summary: result.ok
+        ? result.summary ?? `${result.results.length} rules executed`
+        : result.error || "unknown error",
       results: result.results,
     });
 

@@ -341,7 +341,7 @@ async function executeRule(
   }
 }
 
-export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean; results: RuleResult[]; error?: string }> {
+export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean; results: RuleResult[]; error?: string; summary?: string }> {
   const results: RuleResult[] = [];
 
   try {
@@ -362,24 +362,42 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     const isSol = record.sourceMint === WSOL_MINT;
     let sourceBalance = 0;
     let sourceAta: PublicKey | null = null;
+    let lamports = 0;
 
     if (isSol) {
       // SOL mode: the amount to split is the wallet's native SOL, minus a fee reserve.
-      const lamports = await connection.getBalance(keypair.publicKey);
+      lamports = await connection.getBalance(keypair.publicKey);
       sourceBalance = Math.max(0, lamports - SOL_RESERVE_LAMPORTS);
     } else {
-      // SPL mode: the amount to split is the source token's ATA balance.
+      // SPL mode: the amount to split is the source token's ATA balance. Derive the ATA with the
+      // mint's ACTUAL token program (legacy vs Token-2022) — defaulting to the legacy program here
+      // derives the wrong ATA for a Token-2022 source, so getAccount misses and the whole run
+      // silently no-ops (no swaps, reported as "success"). This is the same program-detection the
+      // rules already do; the source read was the one place still hard-wired to legacy.
       const sourceMintPubkey = new PublicKey(record.sourceMint);
-      sourceAta = await getAssociatedTokenAddress(sourceMintPubkey, keypair.publicKey);
+      const programId = await getTokenProgramId(sourceMintPubkey);
+      sourceAta = await getAssociatedTokenAddress(sourceMintPubkey, keypair.publicKey, false, programId);
       try {
-        const accountInfo = await getAccount(connection, sourceAta);
+        const accountInfo = await getAccount(connection, sourceAta, "confirmed", programId);
         sourceBalance = Number(accountInfo.amount);
       } catch {
-        return { ok: true, results }; // no reward-token account yet — not an error
+        // No reward-token account yet — not an error, but say so instead of a bare "success" so a
+        // stuck pipeline reports a reason the owner can actually see.
+        return { ok: true, results, summary: "no source-token account on the wallet yet — nothing to split" };
       }
     }
 
-    if (sourceBalance <= 0) return { ok: true, results };
+    if (sourceBalance <= 0) {
+      // The run happened but there was nothing to swap. Spell out WHY — an empty "success" is
+      // exactly what makes "swaps don't happen, I think" impossible to diagnose.
+      const summary =
+        isSol && lamports > 0
+          ? `wallet holds ${(lamports / 1e9).toFixed(4)} SOL, at or below the ${(SOL_RESERVE_LAMPORTS / 1e9).toFixed(3)} SOL fee reserve — add more SOL so there's a spendable surplus to swap`
+          : isSol
+            ? "wallet SOL balance is 0 — nothing claimed to split yet"
+            : "source-token balance is 0 — nothing to split yet";
+      return { ok: true, results, summary };
+    }
 
     const failures: string[] = [];
     for (let i = 0; i < record.rules.length; i++) {
