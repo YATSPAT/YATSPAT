@@ -14,6 +14,8 @@ import {
   createBurnInstruction,
   createTransferInstruction,
   getAccount,
+  TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
@@ -63,6 +65,24 @@ function describeError(err: unknown): string {
   }
 }
 
+/* ── Detect a mint's token program (legacy SPL vs Token-2022). Every SPL instruction we build
+   (ATA derivation, transfer, burn) must target the mint's actual program or it fails with
+   InvalidAccountData. ── */
+async function getTokenProgramId(mint: PublicKey): Promise<PublicKey> {
+  const info = await connection.getAccountInfo(mint);
+  if (info?.owner.equals(TOKEN_2022_PROGRAM_ID)) return TOKEN_2022_PROGRAM_ID;
+  return TOKEN_PROGRAM_ID;
+}
+
+/* ── Current token balance of an ATA (0 if the account doesn't exist yet). ── */
+async function ataBalance(ata: PublicKey, programId: PublicKey): Promise<bigint> {
+  try {
+    return (await getAccount(connection, ata, "confirmed", programId)).amount;
+  } catch {
+    return 0n;
+  }
+}
+
 /* ── Jupiter swap — returns the raw (base-unit) output amount, still in the output mint's own decimals ── */
 async function jupiterSwap(keypair: Keypair, inputMint: string, outputMint: string, amount: number) {
   const quoteUrl = `${JUPITER_API}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=100`;
@@ -98,49 +118,47 @@ async function jupiterSwap(keypair: Keypair, inputMint: string, outputMint: stri
 }
 
 /* ── Burn tokens — `amountRaw` is already in the mint's base units ── */
-async function burnTokens(keypair: Keypair, mint: string, amountRaw: number) {
-  const mintPubkey = new PublicKey(mint);
-  const ata = await getAssociatedTokenAddress(mintPubkey, keypair.publicKey);
+async function burnTokens(keypair: Keypair, mintPubkey: PublicKey, ata: PublicKey, amountRaw: bigint, programId: PublicKey) {
   const sig = await sendAndConfirmTransaction(
     connection,
-    new Transaction().add(createBurnInstruction(ata, mintPubkey, keypair.publicKey, amountRaw)),
+    new Transaction().add(createBurnInstruction(ata, mintPubkey, keypair.publicKey, amountRaw, [], programId)),
     [keypair],
     { commitment: "confirmed" }
   );
-  return { txid: sig, burnedRaw: amountRaw };
+  return { txid: sig };
 }
 
 /* ── Distribute to holders — `totalRawAmount` is the swap's raw output amount, already in `mint`'s base units.
    No decimal conversion here: mixing another mint's decimals into this math is exactly the bug being fixed. ── */
 async function distributeTokens(
   keypair: Keypair,
-  mint: string,
+  mintPubkey: PublicKey,
+  sourceAta: PublicKey,
+  programId: PublicKey,
   holders: { address: string; pct: number }[],
   totalRawAmount: number
 ) {
-  const mintPubkey = new PublicKey(mint);
-  const sourceAta = await getAssociatedTokenAddress(mintPubkey, keypair.publicKey);
   const results: { address: string; amountRaw: number; txid: string }[] = [];
 
-  const BATCH_SIZE = 5; // lower than before since each transfer now also carries an ATA-create instruction
+  const BATCH_SIZE = 5; // each transfer also carries an ATA-create instruction, so keep batches small
   for (let i = 0; i < holders.length; i += BATCH_SIZE) {
     const batch = holders.slice(i, i + BATCH_SIZE);
     const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
+    const included: { address: string; amountRaw: number }[] = [];
 
     for (const h of batch) {
       const amountRaw = Math.floor(totalRawAmount * (h.pct / 100));
       if (amountRaw <= 0) continue;
       const dest = new PublicKey(h.address);
-      const destAta = await getAssociatedTokenAddress(mintPubkey, dest);
-      tx.add(createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey));
-      tx.add(createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw));
+      const destAta = await getAssociatedTokenAddress(mintPubkey, dest, false, programId);
+      tx.add(createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey, programId));
+      tx.add(createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw, [], programId));
+      included.push({ address: h.address, amountRaw });
     }
 
-    if (tx.instructions.length > 1) {
+    if (included.length) {
       const sig = await sendAndConfirmTransaction(connection, tx, [keypair], { commitment: "confirmed", skipPreflight: true });
-      for (const h of batch) {
-        results.push({ address: h.address, amountRaw: Math.floor(totalRawAmount * (h.pct / 100)), txid: sig });
-      }
+      for (const h of included) results.push({ ...h, txid: sig });
     }
   }
 
@@ -150,13 +168,14 @@ async function distributeTokens(
 /* ── Send SPL tokens to a single wallet — creates the destination ATA if missing ── */
 async function transferTokens(keypair: Keypair, mint: string, sourceAta: PublicKey, toWallet: string, amountRaw: number) {
   const mintPubkey = new PublicKey(mint);
+  const programId = await getTokenProgramId(mintPubkey);
   const dest = new PublicKey(toWallet);
-  const destAta = await getAssociatedTokenAddress(mintPubkey, dest);
+  const destAta = await getAssociatedTokenAddress(mintPubkey, dest, false, programId);
 
   const tx = new Transaction().add(
     ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }),
-    createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey),
-    createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw)
+    createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey, programId),
+    createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw, [], programId)
   );
   const sig = await sendAndConfirmTransaction(connection, tx, [keypair], { commitment: "confirmed" });
   return { txid: sig };
@@ -213,9 +232,18 @@ async function getTokenHolders(mint: string): Promise<{ address: string; balance
     cursor = data.result?.cursor;
   } while (cursor);
 
-  const total = allHolders.reduce((sum, h) => sum + (h.amount || 0), 0);
-  return allHolders
-    .filter((h) => h.amount > 0 && h.owner !== "11111111111111111111111111111111")
+  // Only distribute to real wallets. Off-curve owners are pools / program vaults / bonding-curve
+  // accounts — they throw TokenOwnerOffCurveError on ATA derivation and shouldn't be rewarded anyway.
+  const eligible = allHolders.filter((h) => {
+    if (!(h.amount > 0) || h.owner === "11111111111111111111111111111111") return false;
+    try {
+      return PublicKey.isOnCurve(new PublicKey(h.owner).toBytes());
+    } catch {
+      return false;
+    }
+  });
+  const total = eligible.reduce((sum, h) => sum + (h.amount || 0), 0);
+  return eligible
     .map((h) => ({
       address: h.owner,
       pct: total > 0 ? ((h.amount || 0) / total) * 100 : 0,
@@ -236,18 +264,30 @@ async function executeRule(
     case "burn": {
       // Native SOL can't be burned — there's no SPL token account behind it. Skip safely.
       if (isSol) return { type: "burn", pct: rule.pct, skipped: true, note: "cannot burn native SOL" };
-      const { txid } = await burnTokens(keypair, sourceMint, ruleAmountRaw);
+      const mintPk = new PublicKey(sourceMint);
+      const programId = await getTokenProgramId(mintPk);
+      const ata = await getAssociatedTokenAddress(mintPk, keypair.publicKey, false, programId);
+      const { txid } = await burnTokens(keypair, mintPk, ata, BigInt(ruleAmountRaw), programId);
       return { type: "burn", pct: rule.pct, amountRaw: ruleAmountRaw, txid };
     }
 
     case "buy-burn": {
       if (!rule.targetMint) throw new Error("buy-burn requires targetMint");
-      // In SOL mode the swap input is wrapped SOL; Jupiter handles wrap/unwrap of native SOL.
+      const mintPk = new PublicKey(rule.targetMint);
+      const programId = await getTokenProgramId(mintPk);
+      const ata = await getAssociatedTokenAddress(mintPk, keypair.publicKey, false, programId);
+      // Burn what we ACTUALLY receive (post − pre balance), not the quote — slippage means the
+      // filled amount can be less than quoted, and burning more than we hold fails the whole tx.
+      const pre = await ataBalance(ata, programId);
       const swapResult = await jupiterSwap(keypair, sourceMint, rule.targetMint, ruleAmountRaw);
-      const burnResult = await burnTokens(keypair, rule.targetMint, swapResult.outAmountRaw);
+      const received = (await ataBalance(ata, programId)) - pre;
+      if (received <= 0n) {
+        return { type: "buy-burn", pct: rule.pct, swappedRaw: ruleAmountRaw, burnedRaw: 0, swapTxid: swapResult.txid, note: "nothing received to burn" };
+      }
+      const burnResult = await burnTokens(keypair, mintPk, ata, received, programId);
       return {
         type: "buy-burn", pct: rule.pct,
-        swappedRaw: ruleAmountRaw, burnedRaw: swapResult.outAmountRaw,
+        swappedRaw: ruleAmountRaw, burnedRaw: Number(received),
         swapTxid: swapResult.txid, burnTxid: burnResult.txid,
       };
     }
@@ -255,15 +295,20 @@ async function executeRule(
     case "distribute": {
       if (!rule.targetMint) throw new Error("distribute requires targetMint");
       if (!rule.holderMint) throw new Error("distribute requires holderMint");
-
+      const mintPk = new PublicKey(rule.targetMint);
+      const programId = await getTokenProgramId(mintPk);
+      const srcAta = await getAssociatedTokenAddress(mintPk, keypair.publicKey, false, programId);
+      const pre = await ataBalance(srcAta, programId);
       const swapResult = await jupiterSwap(keypair, sourceMint, rule.targetMint, ruleAmountRaw);
+      const received = Number((await ataBalance(srcAta, programId)) - pre);
+
       const holders = await getTokenHolders(rule.holderMint);
-      const distResults = await distributeTokens(keypair, rule.targetMint, holders, swapResult.outAmountRaw);
+      const distResults = received > 0 ? await distributeTokens(keypair, mintPk, srcAta, programId, holders, received) : [];
 
       return {
         type: "distribute", pct: rule.pct,
-        swappedRaw: ruleAmountRaw, outAmountRaw: swapResult.outAmountRaw,
-        swapTxid: swapResult.txid, totalHolders: holders.length,
+        swappedRaw: ruleAmountRaw, receivedRaw: received,
+        swapTxid: swapResult.txid, totalHolders: holders.length, distributed: distResults.length,
         distributions: distResults.slice(0, 20),
       };
     }
