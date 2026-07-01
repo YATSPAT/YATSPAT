@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
 
-const JUPITER_API = "https://quote-api.jup.ag/v6";
+const JUPITER_API = "https://lite-api.jup.ag/swap/v1";
 
 interface QuoteResult {
   inputMint: string;

@@ -25,7 +25,9 @@ const RPC_URL = HELIUS_KEY
   : "https://api.mainnet-beta.solana.com";
 
 const connection = new Connection(RPC_URL, "confirmed");
-const JUPITER_API = "https://quote-api.jup.ag/v6";
+// Jupiter's old quote-api.jup.ag/v6 host was retired (DNS no longer resolves — surfaced as
+// "fetch failed"). Current free endpoint is lite-api.jup.ag/swap/v1 with the same quote/swap contract.
+const JUPITER_API = "https://lite-api.jup.ag/swap/v1";
 
 // Canonical wrapped-SOL mint. When a pipeline's source is this, we're in "SOL mode":
 // the thing being split is the wallet's native SOL (e.g. claimed Pump.fun creator rewards),
