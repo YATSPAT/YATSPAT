@@ -26,6 +26,7 @@ interface RuleResult {
   holderMint: string;
   estimatedAmount: number;
   holders?: { address: string; balance: number; percentage: number; receive: number }[];
+  allocationMode?: "equal-max-recipients";
 }
 
 interface ReflectOutput {
@@ -104,18 +105,17 @@ export default async function handler(
       if (rule.type === "distribute" && rule.holderMint) {
         // Snapshot holders of the holder token
         const holders = await fetchHolders(rule.holderMint, network);
-        // Recalculate for eligible subset
-        const totalHeld = holders.reduce((s, h) => s + h.balance, 0);
+        const equalReceive = holders.length > 0 ? pool / holders.length : 0;
         const distHolders = holders.map((h) => ({
           address: h.address,
           balance: h.balance,
-          percentage: totalHeld > 0 ? Math.round((h.balance / totalHeld) * 10000) / 100 : 0,
-          receive: totalHeld > 0 ? pool * (h.balance / totalHeld) : 0,
+          percentage: holders.length > 0 ? Math.round((100 / holders.length) * 100) / 100 : 0,
+          receive: equalReceive,
         }));
         results.push({
           type: "distribute", pct: rule.pct, targetMint: rule.targetMint,
           targetWallet: rule.targetWallet, holderMint: rule.holderMint,
-          estimatedAmount: pool, holders: distHolders,
+          estimatedAmount: pool, holders: distHolders, allocationMode: "equal-max-recipients",
         });
       } else {
         results.push({

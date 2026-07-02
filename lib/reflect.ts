@@ -4,48 +4,6 @@ export interface Holder {
   percentage: number;
 }
 
-export interface ReflectInput {
-  mint: string;
-  network?: "devnet" | "mainnet";
-  rewardAmount: number;
-  extraFeePercent: number;
-  splitPercent: number;
-  burnTokenMint: string;
-  distTokenMint: string;
-  excludeTop: number;
-  excludeBottom: number;
-}
-
-export interface DistributedHolder extends Holder {
-  receive: number;
-}
-
-export interface ReflectOutput {
-  mint: string;
-  network: string;
-  snapshot: { totalHolders: number; holders: Holder[] };
-  rewards: {
-    collected: number;
-    feePercent: number;
-    feeAmount: number;
-    afterFee: number;
-  };
-  burn: {
-    splitPercent: number;
-    burnPool: number;
-    burnTokenMint: string;
-  };
-  distribution: {
-    distPool: number;
-    distTokenMint: string;
-    excludedTop: number;
-    excludedBottom: number;
-    excludedCount: number;
-    eligibleCount: number;
-    holders: DistributedHolder[];
-  };
-}
-
 function getRpc(network: "devnet" | "mainnet"): string {
   const key = process.env.HELIUS_API_KEY || "";
   if (network === "mainnet") {
@@ -131,49 +89,4 @@ export async function fetchHolders(
   holders.sort((a, b) => b.balance - a.balance);
 
   return holders;
-}
-
-export function computeReflection(
-  holders: Holder[],
-  input: Omit<ReflectInput, "mint">
-) {
-  const afterFee = input.rewardAmount * (1 - input.extraFeePercent / 100);
-  const burnPool = afterFee * (input.splitPercent / 100);
-  const distPool = afterFee - burnPool;
-
-  const sorted = [...holders].sort((a, b) => b.balance - a.balance);
-  const n = sorted.length;
-  const topCut = Math.floor(n * (input.excludeTop / 100));
-  const bottomCut = Math.floor(n * (input.excludeBottom / 100));
-  const slice = sorted.slice(topCut, n - bottomCut);
-
-  const totalSliceBalance = slice.reduce((s, h) => s + h.balance, 0);
-  const distributed: DistributedHolder[] = slice.map((h) => ({
-    ...h,
-    percentage: totalSliceBalance > 0 ? (h.balance / totalSliceBalance) * 100 : 0,
-    receive: totalSliceBalance > 0 ? distPool * (h.balance / totalSliceBalance) : 0,
-  }));
-
-  return {
-    rewards: {
-      collected: input.rewardAmount,
-      feePercent: input.extraFeePercent,
-      feeAmount: input.rewardAmount - afterFee,
-      afterFee,
-    },
-    burn: {
-      splitPercent: input.splitPercent,
-      burnPool,
-      burnTokenMint: input.burnTokenMint,
-    },
-    distribution: {
-      distPool,
-      distTokenMint: input.distTokenMint,
-      excludedTop: topCut,
-      excludedBottom: bottomCut,
-      excludedCount: n - slice.length,
-      eligibleCount: slice.length,
-      holders: distributed,
-    },
-  };
 }

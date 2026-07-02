@@ -20,7 +20,7 @@ interface PublicPipeline {
 const ACTION_ICON: Record<string, string> = {
   "buy-burn": "🔄",
   burn: "🔥",
-  distribute: "📤",
+  distribute: "◎",
   send: "💸",
 };
 
@@ -80,12 +80,12 @@ function PipeCard({ p }: { p: PublicPipeline }) {
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {p.source === "creator-rewards" && (
           <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-400/25 text-cyan-300 text-[10px]">
-            creator rewards
+            collected SOL
           </span>
         )}
         {p.rules.map((r, i) => (
           <span key={i} className="px-1.5 py-0.5 rounded-md bg-surface-900/70 border border-slate-700/40 text-slate-300 text-[10px]">
-            {ACTION_ICON[r.type] ?? "•"} {r.pct}%
+            {ACTION_ICON[r.type] ?? "•"} {r.type === "distribute" ? "ATA growth" : r.type} {r.pct}%
           </span>
         ))}
         <span className="ml-auto text-[10px] text-slate-500">{timeAgo(p.lastRunAt)}</span>
@@ -132,7 +132,7 @@ export default function LivePipelines() {
   return (
     <div className="glass-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-cyan-300 tracking-wide">Live Pipelines</h3>
+        <h3 className="text-sm font-bold text-cyan-300 tracking-wide">Active ATA Growth Jobs</h3>
         <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           {pipes.length} running
@@ -142,7 +142,7 @@ export default function LivePipelines() {
       {!loaded ? (
         <p className="text-xs text-slate-500 py-6 text-center">Loading…</p>
       ) : pipes.length === 0 ? (
-        <p className="text-xs text-slate-500 py-6 text-center">No pipelines running yet.</p>
+        <p className="text-xs text-slate-500 py-6 text-center">No ATA growth jobs running yet.</p>
       ) : (
         <div className="live-viewport">
           <div className={`live-track ${scroll ? "is-scrolling" : ""}`}>

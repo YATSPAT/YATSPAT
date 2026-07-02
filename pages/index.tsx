@@ -27,47 +27,47 @@ interface HudInfo {
 const ACTION_LABEL: Record<RuleType, string> = {
   "buy-burn": "Swap → Burn",
   burn: "Burn tokens",
-  distribute: "Distribute to holders",
+  distribute: "Increase ATA holders",
   send: "Send to wallet",
 };
 
 const STEP_HUD: Record<Step, HudInfo> = {
   source: {
-    crumb: "Reward Source",
-    title: "Where Rewards Come From",
-    body: "For a Pump.fun coin, leave auto-claim on — rewards arrive as SOL and the pipeline claims them for you. Turn it off only to run rules on an SPL token this wallet already holds.",
+    crumb: "Funding Source",
+    title: "Where Growth Funding Comes From",
+    body: "For a Pump.fun coin, leave collection on. Creator rewards accrue as SOL, and the system collects them before running the ATA holder growth job.",
   },
   split: {
-    crumb: "Split Rules",
-    title: "Divide Your Rewards",
-    body: "Each rule claims a percentage of incoming rewards and routes it to an action — burn, swap-then-burn, distribute to holders, or send to a fixed wallet. Rules must total 100%.",
+    crumb: "Growth Rules",
+    title: "Configure Holder Growth",
+    body: "Use rules to route collected SOL into token-account holder growth or other treasury actions. For ATA growth, recipients are selected from an eligible holder snapshot and receive equal allocations.",
   },
   schedule: {
     crumb: "Schedule",
     title: "Execution Schedule",
-    body: "How often the pipeline checks for new rewards and executes your split rules. Shorter intervals react faster but run more transactions.",
+    body: "How often the system checks for collectible SOL and whether the 0.5 SOL execution threshold has been reached.",
   },
   done: {
     crumb: "Done",
-    title: "Pipeline Status",
-    body: "Your deploy result, keypair status, and next steps to get the pipeline executing on schedule.",
+    title: "Growth Job Status",
+    body: "Deployment status, keypair status, and the next scheduled checks for ATA holder growth.",
   },
 };
 
 function ruleHud(rule: SplitRule, field: "type" | "pct" | "target", index: number): HudInfo {
-  const crumb = `Split Rules → Rule ${index + 1} → ${field === "type" ? "Action" : field === "pct" ? "Allocation" : ACTION_LABEL[rule.type]}`;
+  const crumb = `Growth Rules → Rule ${index + 1} → ${field === "type" ? "Action" : field === "pct" ? "Allocation" : ACTION_LABEL[rule.type]}`;
   if (field === "pct") {
     return {
       crumb,
       title: "Allocation %",
-      body: `This rule currently claims ${rule.pct}% of incoming rewards. All rules together must total exactly 100%.`,
+      body: `This rule receives ${rule.pct}% of the collected SOL available for this execution. All rules together must total exactly 100%.`,
     };
   }
   if (field === "type") {
     return {
       crumb,
       title: "Rule Action",
-      body: `Currently set to "${ACTION_LABEL[rule.type]}". Choose how this share of rewards is handled once collected.`,
+      body: `Currently set to "${ACTION_LABEL[rule.type]}". Choose how this share of collected SOL is handled.`,
     };
   }
   if (rule.type === "buy-burn") {
@@ -81,16 +81,16 @@ function ruleHud(rule: SplitRule, field: "type" | "pct" | "target", index: numbe
   if (rule.type === "distribute") {
     return {
       crumb,
-      title: "Snapshot Holders Of",
-      body: "Rewards go to the top holders of this token, split proportionally by balance. The number of recipients scales with the size of each drop — roughly one holder per 0.015 SOL of claimed fees, topping out at 200 holders on 3+ SOL drops — so small drops stay efficient and big drops reach wide.",
-      example: "e.g. your project's main token mint.",
+      title: "Eligible Holder Snapshot",
+      body: "The system snapshots holders of this mint, randomly selects as many eligible wallets as the SOL budget can support, and sends equal token allocations. Balances qualify wallets for the snapshot; they do not increase payout size.",
+      example: "e.g. the community token whose holders should be eligible for ATA growth.",
     };
   }
   if (rule.type === "send") {
     return {
       crumb,
       title: "Destination Wallet",
-      body: "A fixed wallet address that receives this rule's share of rewards every cycle.",
+      body: "A fixed wallet address that receives this rule's share of collected SOL or tokens every cycle.",
     };
   }
   return STEP_HUD.split;
@@ -98,25 +98,25 @@ function ruleHud(rule: SplitRule, field: "type" | "pct" | "target", index: numbe
 
 const FIELD_HUD: Record<string, HudInfo> = {
   "source.claim": {
-    crumb: "Reward Source → Creator Rewards",
-    title: "Auto-Claim Creator Rewards",
-    body: "Pump.fun creator rewards accrue on the protocol side and are paid in SOL — they don't land in your wallet until claimed. With this on, the pipeline claims them every cycle before running your split rules, so there's always something to work with.",
+    crumb: "Funding Source → Creator Rewards",
+    title: "Collect Creator Rewards",
+    body: "Pump.fun creator rewards accrue on the protocol side and are paid in SOL. With this on, the system collects them before checking whether there is enough spendable SOL for the next ATA holder growth event.",
     example: "Off: use an SPL token this wallet already holds as the source instead.",
   },
   "source.wallet": {
-    crumb: "Reward Source → Creator Wallet",
+    crumb: "Funding Source → Creator Wallet",
     title: "Creator Wallet Address",
-    body: "The wallet that currently receives raw reward tokens before the pipeline redirects them. Auto-fills from your connected wallet.",
+    body: "The wallet whose collectible SOL funds ATA holder growth. Auto-fills from your connected wallet.",
   },
   "source.keypair": {
-    crumb: "Reward Source → Creator Keypair",
+    crumb: "Funding Source → Creator Keypair",
     title: "Auto-Execution Keypair",
-    body: "Encrypted (AES-256-GCM) before it's stored, decrypted only in memory at execution time. Use a dedicated throwaway wallet funded only with what this pipeline needs to move — never your main wallet.",
+    body: "Encrypted (AES-256-GCM) before storage and decrypted only in memory at execution time. Use a dedicated operations wallet funded only for this job.",
   },
   "schedule.cron": {
     crumb: "Schedule → Interval",
     title: "Execution Schedule",
-    body: "How often the pipeline checks for new rewards and executes your split rules.",
+    body: "How often the system checks for collectible SOL and the 0.5 SOL holder-growth threshold.",
     example: "Presets range from every 5 minutes to daily.",
   },
 };
@@ -192,8 +192,7 @@ export default function Home() {
   const [deployResult, setDeployResult] = useState<any>(null);
 
   const [rules, setRules] = useState<SplitRule[]>([
-    { id: "1", type: "buy-burn", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
-    { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+    { id: "1", type: "distribute", pct: 100, targetMint: "", targetWallet: "", holderMint: "" },
   ]);
 
   const totalPct = useMemo(() => rules.reduce((s, r) => s + r.pct, 0), [rules]);
@@ -262,8 +261,7 @@ export default function Home() {
     setSourceWallet("");
     setCreatorKeypair("");
     setRules([
-      { id: "1", type: "buy-burn", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
-      { id: "2", type: "distribute", pct: 50, targetMint: "", targetWallet: "", holderMint: "" },
+      { id: "1", type: "distribute", pct: 100, targetMint: "", targetWallet: "", holderMint: "" },
     ]);
     setIntervalMinutes(60);
     setDeployResult(null);
@@ -296,7 +294,7 @@ export default function Home() {
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-white tracking-tight">Wen Stimmy?</h1>
               <p className="text-xs text-slate-300 flex items-center gap-2">
-                <span className="hidden sm:inline">Reflection Token Panel</span>
+                <span className="hidden sm:inline">ATA Holder Growth Panel</span>
                 <span className="px-1.5 py-px rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] uppercase tracking-wider">MAINNET</span>
               </p>
             </div>
@@ -318,7 +316,7 @@ export default function Home() {
 
       <section className="relative max-w-6xl mx-auto pt-32 pb-40 px-4">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-8 max-w-xl">
-          Automated Reward Pipeline Deployment
+          Increase Token Account Holders
         </h2>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
@@ -329,8 +327,8 @@ export default function Home() {
               <button type="button" className="accordion-header" onClick={() => toggleStep("source")}>
                 <div className={badgeClasses("source")}>{badgeText("source")}</div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">1. Reward Source</h3>
-                  <p className="text-sm text-slate-300">What token are you collecting rewards from, and which wallet holds them?</p>
+                  <h3 className="text-lg font-semibold text-white">1. Funding Source</h3>
+                  <p className="text-sm text-slate-300">Choose the wallet and collected SOL source for ATA holder growth.</p>
                 </div>
                 {step !== "source" && <Chevron open={isOpen("source")} />}
               </button>
@@ -353,25 +351,25 @@ export default function Home() {
                       <span className={`w-4 h-4 rounded-full bg-white shadow transition-all ${claimCreatorFees ? "translate-x-4" : "translate-x-0.5"}`} />
                     </span>
                     <span>
-                      <span className="block text-sm font-medium text-white">Auto-claim Pump.fun creator rewards</span>
-                      <span className="block text-xs text-slate-400">Rewards are paid in SOL. The pipeline claims them each cycle, then runs your split rules on the claimed SOL.</span>
+                      <span className="block text-sm font-medium text-white">Collect Pump.fun creator rewards</span>
+                      <span className="block text-xs text-slate-400">Creator rewards are collected as SOL and held until the wallet reaches the holder-growth threshold.</span>
                     </span>
                   </button>
                   {!claimCreatorFees && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">Reward Token Mint</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">Source Token Mint</label>
                       <input
                         className="glass-input font-mono text-sm"
                         value={sourceMint}
                         onFocus={() => setHud(STEP_HUD.source)}
                         onChange={(e) => setSourceMint(e.target.value)}
-                        placeholder="SPL mint — the token this wallet already receives"
+                        placeholder="SPL mint already held by this operations wallet"
                       />
                     </div>
                   )}
                   {claimCreatorFees && (
                     <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400">
-                      Source: <span className="text-cyan-300 font-mono">claimed creator rewards (SOL)</span> — no reward-token mint needed.
+                      Source: <span className="text-cyan-300 font-mono">collected creator rewards (SOL)</span> — execution waits for at least 0.5 spendable SOL.
                     </div>
                   )}
                   <div>
@@ -388,7 +386,7 @@ export default function Home() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Creator Wallet Keypair</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Operations Wallet Keypair</label>
                     <input
                       type="password"
                       className="glass-input font-mono text-sm"
@@ -397,7 +395,7 @@ export default function Home() {
                       onChange={(e) => setCreatorKeypair(e.target.value)}
                       placeholder="Paste private key (base58) for auto-execution"
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">Encrypted at rest, decrypted only in memory when the pipeline runs. Use a dedicated throwaway wallet — never your main one.</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Encrypted at rest, decrypted only in memory when the job runs. Use a dedicated operations wallet, not a primary treasury wallet.</p>
                   </div>
                   <button className="btn-primary w-full" onClick={() => goToStep("split")} disabled={!claimCreatorFees && !sourceMint.trim()}>Continue →</button>
                 </div>
@@ -409,8 +407,8 @@ export default function Home() {
               <button type="button" className="accordion-header" onClick={() => toggleStep("split")}>
                 <div className={badgeClasses("split")}>{badgeText("split")}</div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">2. Split Rules</h3>
-                  <p className="text-sm text-slate-300">Divide rewards any number of ways.</p>
+                  <h3 className="text-lg font-semibold text-white">2. Growth Rules</h3>
+                  <p className="text-sm text-slate-300">Configure how collected SOL increases token-account holder count.</p>
                 </div>
                 {step !== "split" && <Chevron open={isOpen("split")} />}
               </button>
@@ -442,14 +440,14 @@ export default function Home() {
                         >
                           <option value="buy-burn">🔄 Swap → Burn</option>
                           {!claimCreatorFees && <option value="burn">🔥 Burn tokens</option>}
-                          <option value="distribute">📤 Distribute to holders</option>
+                          <option value="distribute">📤 Increase ATA holders</option>
                           <option value="send">💸 Send to wallet</option>
                         </select>
                       </div>
                       {(rule.type !== "burn") && (
                         <div>
                           <label className="block text-xs font-medium text-slate-300 mb-1">
-                            {rule.type === "buy-burn" ? "Swap into (then burn)" : rule.type === "distribute" ? "Token to distribute" : "Token to send"}
+                            {rule.type === "buy-burn" ? "Swap into (then burn)" : rule.type === "distribute" ? "Token used for ATA growth" : "Token to send"}
                           </label>
                           <input
                             className="glass-input font-mono text-xs"
@@ -474,14 +472,15 @@ export default function Home() {
                       )}
                       {rule.type === "distribute" && (
                         <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">Snapshot holders of</label>
+                          <label className="block text-xs font-medium text-slate-300 mb-1">Snapshot eligible holders from</label>
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.holderMint}
                             onFocus={() => setHud(ruleHud(rule, "target", i))}
                             onChange={(e) => updateRule(rule.id, { holderMint: e.target.value })}
-                            placeholder="Token mint whose holders receive…"
+                            placeholder="Token mint whose holders enter the lottery…"
                           />
+                          <p className="text-[10px] text-slate-500 mt-1">Selection is randomized and equal-allocation. Holder balance is not a payout multiplier.</p>
                         </div>
                       )}
                     </div>
@@ -514,7 +513,7 @@ export default function Home() {
                 <div className={badgeClasses("schedule")}>{badgeText("schedule")}</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-white">3. Schedule</h3>
-                  <p className="text-sm text-slate-300">How often should the pipeline check for rewards and execute?</p>
+                  <p className="text-sm text-slate-300">How often should the job check for collectible SOL?</p>
                 </div>
                 {step !== "schedule" && <Chevron open={isOpen("schedule")} />}
               </button>
@@ -542,10 +541,10 @@ export default function Home() {
               <div className="glass-card p-8 text-center space-y-5">
                 <div className="text-5xl">{deployResult?.ok ? "✅" : "❌"}</div>
                 <h2 className="text-2xl font-bold text-white">
-                  {deployResult?.ok ? "Pipeline Live" : "Deploy Failed"}
+                  {deployResult?.ok ? "ATA Growth Job Live" : "Deploy Failed"}
                 </h2>
                 <p className="text-slate-300 text-sm">
-                  <code className="text-cyan-300">{sourceMint.slice(0, 10)}…</code> → {rules.filter(r => r.pct > 0).length} rules → every {formatInterval(intervalMinutes)}
+                  {rules.filter(r => r.pct > 0).length} rule{rules.filter(r => r.pct > 0).length === 1 ? "" : "s"} → check every {formatInterval(intervalMinutes)}
                 </p>
 
                 {deployResult?.message && (
@@ -556,10 +555,10 @@ export default function Home() {
 
                 {deployResult?.ok && (
                   <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
-                    <div className="flex justify-between"><span>Pipeline ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
+                    <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
                     <div className="flex justify-between"><span>Rules</span><span className="text-white">{rules.filter(r => r.pct > 0).length}</span></div>
                     <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(intervalMinutes)}</span></div>
-                    <p className="text-[10px] text-emerald-400 pt-1">Nothing else to do — it runs automatically from here on.</p>
+                    <p className="text-[10px] text-emerald-400 pt-1">It will collect, wait for the SOL threshold, then increase ATA holder count automatically.</p>
                   </div>
                 )}
 
@@ -571,7 +570,7 @@ export default function Home() {
           {/* HUD side panel */}
           <div className="hidden lg:block sticky top-32">
             <div className="hud-panel">
-              <h4 className="text-sm font-bold text-cyan-300 tracking-wide mb-3">Pipeline HUD — Technical Details</h4>
+              <h4 className="text-sm font-bold text-cyan-300 tracking-wide mb-3">ATA Growth HUD — Technical Details</h4>
               <p className="text-[11px] font-mono text-slate-500 mb-3 leading-relaxed">{hud.crumb}</p>
               <p className="text-sm font-semibold text-white mb-1.5">{hud.title}</p>
               <p className="text-xs text-slate-300 leading-relaxed">{hud.body}</p>
@@ -601,7 +600,7 @@ export default function Home() {
         <div className="fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-surface-900 via-surface-900/95 to-transparent pt-8 pb-5 px-4">
           <div className="max-w-6xl mx-auto lg:pr-[344px]">
             <button className="btn-deploy w-full" onClick={deploy} disabled={step !== "schedule" || deploying}>
-              {deploying ? "Deploying…" : "⚡ Deploy Pipeline"}
+              {deploying ? "Deploying…" : "⚡ Deploy ATA Growth Job"}
             </button>
           </div>
         </div>

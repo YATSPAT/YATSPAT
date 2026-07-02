@@ -21,7 +21,7 @@ import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
 import { claimCreatorFees } from "./pumpClaim";
 import { computePlatformFee, PLATFORM_FEE_WALLET, PLATFORM_FEE_BPS, MIN_FEE_LAMPORTS } from "./platformFee";
-import { planLotteryDistribution, MAX_LOTTERY_RECIPIENTS, MISSING_ATA_RECIPIENT_COST_LAMPORTS } from "./lotteryDistribution";
+import { allocateEqualRawAmounts, planLotteryDistribution, MAX_LOTTERY_RECIPIENTS, MISSING_ATA_RECIPIENT_COST_LAMPORTS } from "./lotteryDistribution";
 import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
@@ -40,9 +40,7 @@ const JUPITER_API = "https://lite-api.jup.ag/swap/v1";
 // not an SPL token account balance.
 export const WSOL_MINT = "So11111111111111111111111111111111111111112";
 
-// Distribute only to the largest N holders. Every recipient needs an ATA-create (~0.002 SOL rent)
-// + a transfer — sending to every holder of a popular token would blow the function timeout, the
-// rent/fee budget, and the RPC rate limit. The reward pool is split proportionally among the top N.
+// Legacy SPL-mode cap. SOL-mode uses the lottery optimizer below to maximize ATA holder count.
 const MAX_DISTRIBUTE_RECIPIENTS = 100;
 
 export interface RuleResult {
@@ -185,8 +183,9 @@ async function burnTokens(keypair: Keypair, mintPubkey: PublicKey, ata: PublicKe
   return { txid: sig };
 }
 
-/* ── Distribute to holders — `totalRawAmount` is the swap's raw output amount, already in `mint`'s base units.
-   No decimal conversion here: mixing another mint's decimals into this math is exactly the bug being fixed. ── */
+/* ── Distribute equal raw amounts to selected recipients. `totalRawAmount` is the swap's raw
+   output amount, already in `mint`'s base units. Holder balances qualify wallets for the
+   snapshot lottery; they do not weight the payout. ── */
 async function distributeTokens(
   keypair: Keypair,
   mintPubkey: PublicKey,
@@ -196,25 +195,35 @@ async function distributeTokens(
   totalRawAmount: bigint
 ) {
   const results: { address: string; amountRaw: string; txid: string }[] = [];
-  const totalHolderBalance = holders.reduce((sum, h) => sum + h.balanceRaw, 0n);
-  if (totalHolderBalance <= 0n) return results;
+  const holdersByAddress = new Map(holders.map((holder, index) => [
+    holder.address,
+    { ...holder, lotteryRank: holder.lotteryRank ?? index + 1 },
+  ]));
+  const allocations = allocateEqualRawAmounts({
+    recipients: [...holdersByAddress.values()].map((holder) => ({
+      address: holder.address,
+      lotteryRank: holder.lotteryRank ?? 0,
+    })),
+    totalRawAmount,
+  });
+  if (!allocations.length) return results;
 
   const BATCH_SIZE = 8; // mixed transfer/create batches must stay under transaction size limits
-  for (let i = 0; i < holders.length; i += BATCH_SIZE) {
-    const batch = holders.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < allocations.length; i += BATCH_SIZE) {
+    const batch = allocations.slice(i, i + BATCH_SIZE);
     const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
     const included: { address: string; amountRaw: string }[] = [];
 
-    for (const h of batch) {
-      const amountRaw = (totalRawAmount * h.balanceRaw) / totalHolderBalance;
-      if (amountRaw <= 0n) continue;
-      const dest = new PublicKey(h.address);
+    for (const allocation of batch) {
+      const holder = holdersByAddress.get(allocation.address);
+      if (!holder || allocation.amountRaw <= 0n) continue;
+      const dest = new PublicKey(allocation.address);
       const destAta = await getAssociatedTokenAddress(mintPubkey, dest, false, programId);
-      if (!h.hasTargetAta) {
+      if (!holder.hasTargetAta) {
         tx.add(createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey, programId));
       }
-      tx.add(createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw, [], programId));
-      included.push({ address: h.address, amountRaw: amountRaw.toString() });
+      tx.add(createTransferInstruction(sourceAta, destAta, keypair.publicKey, allocation.amountRaw, [], programId));
+      included.push({ address: allocation.address, amountRaw: allocation.amountRaw.toString() });
     }
 
     if (included.length) {
@@ -363,12 +372,12 @@ async function getTokenHolders(
     }
     return [{ owner: h.owner, balanceRaw }];
   });
-  // Take the largest N holders, then split the pool proportionally among just those.
-  const topHolders = eligible
+  // For legacy non-SOL mode, cap the candidate set before equal allocation to keep runtime bounded.
+  const cappedHolders = eligible
     .sort((a, b) => (a.balanceRaw === b.balanceRaw ? 0 : a.balanceRaw > b.balanceRaw ? -1 : 1))
     .slice(0, Math.max(1, limit));
-  const total = topHolders.reduce((sum, h) => sum + h.balanceRaw, 0n);
-  return topHolders.map((h) => ({
+  const total = cappedHolders.reduce((sum, h) => sum + h.balanceRaw, 0n);
+  return cappedHolders.map((h) => ({
     address: h.owner,
     balanceRaw: h.balanceRaw,
     pct: total > 0n ? Number((h.balanceRaw * 1_000_000n) / total) / 10_000 : 0,
@@ -499,6 +508,7 @@ async function executeRule(
         type: "distribute", pct: rule.pct,
         swappedRaw: swapAmountRaw, receivedRaw: received.toString(),
         swapTxid: swapResult.txid, totalHolders: holders.length, distributed: distResults.length,
+        allocationMode: "equal-max-recipients",
         ...(lottery ? {
           lottery: {
             seed: lottery.seed,
@@ -607,7 +617,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       return { ok: true, results, summary };
     }
 
-    // Platform fee: 1.5% off the top of the pool before the split rules run (disclosed in docs).
+    // Platform fee: 1.5% off the top of the pool before growth rules run (disclosed in docs).
     // Failure to collect is recorded but never blocks the user's own distribution.
     const feeRaw = computePlatformFee(sourceBalance);
     if (feeRaw >= MIN_FEE_LAMPORTS || (!isSol && feeRaw > 0)) {

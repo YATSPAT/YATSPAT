@@ -25,6 +25,16 @@ export interface LotteryDistributionPlan {
   skippedForBudget: number;
 }
 
+export interface EqualAllocationRecipient {
+  address: string;
+  lotteryRank: number;
+}
+
+export interface EqualRawAllocation {
+  address: string;
+  amountRaw: bigint;
+}
+
 export function planLotteryDistribution(input: {
   candidates: LotteryCandidate[];
   poolLamports: number;
@@ -88,6 +98,26 @@ export function planLotteryDistribution(input: {
     swapLamports: Math.max(minSwapLamports, Math.floor(input.poolLamports - estimatedCostLamports)),
     skippedForBudget,
   };
+}
+
+export function allocateEqualRawAmounts(input: {
+  recipients: EqualAllocationRecipient[];
+  totalRawAmount: bigint;
+}): EqualRawAllocation[] {
+  if (input.totalRawAmount <= 0n) return [];
+  const ranked = [...input.recipients].sort((a, b) => a.lotteryRank - b.lotteryRank);
+  const recipients = input.totalRawAmount < BigInt(ranked.length)
+    ? ranked.slice(0, Number(input.totalRawAmount))
+    : ranked;
+  if (!recipients.length) return [];
+
+  const base = input.totalRawAmount / BigInt(recipients.length);
+  const dust = Number(input.totalRawAmount % BigInt(recipients.length));
+
+  return recipients.map((recipient, index) => ({
+    address: recipient.address,
+    amountRaw: base + (index < dust ? 1n : 0n),
+  }));
 }
 
 function stableShuffle<T>(items: T[], seed: string): T[] {

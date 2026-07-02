@@ -1,5 +1,5 @@
 /* ── Platform fee ─────────────────────────────────────────────────────
-   1.5% of each run's pool, taken off the top BEFORE the split rules run
+   1.5% of each run's pool, taken off the top BEFORE growth rules run
    (rules operate on the remaining 98.5%). Disclosed in the docs. In SOL
    mode this is a native transfer; in SPL mode it's a token transfer of
    the source mint. */
