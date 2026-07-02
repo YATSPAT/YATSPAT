@@ -20,9 +20,9 @@ import {
 import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
 import { claimCreatorFees } from "./pumpClaim";
-import { spendableClaimedRewardLamports } from "./rewardFunding";
-import { planDistribution, ATA_COST_LAMPORTS } from "./distributionBuckets";
 import { computePlatformFee, PLATFORM_FEE_WALLET, PLATFORM_FEE_BPS, MIN_FEE_LAMPORTS } from "./platformFee";
+import { planLotteryDistribution, MAX_LOTTERY_RECIPIENTS, MISSING_ATA_RECIPIENT_COST_LAMPORTS } from "./lotteryDistribution";
+import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
 const HELIUS_KEY = process.env.HELIUS_API_KEY || "";
@@ -40,10 +40,6 @@ const JUPITER_API = "https://lite-api.jup.ag/swap/v1";
 // not an SPL token account balance.
 export const WSOL_MINT = "So11111111111111111111111111111111111111112";
 
-// Leave this much SOL untouched to cover transaction fees for the claim + every rule tx
-// (swaps, distribute batches, sends). Without a float, the wallet couldn't pay for its own txs.
-const SOL_RESERVE_LAMPORTS = 20_000_000; // 0.02 SOL
-
 // Distribute only to the largest N holders. Every recipient needs an ATA-create (~0.002 SOL rent)
 // + a transfer — sending to every holder of a popular token would blow the function timeout, the
 // rent/fee budget, and the RPC rate limit. The reward pool is split proportionally among the top N.
@@ -59,6 +55,8 @@ interface TokenHolder {
   address: string;
   balanceRaw: bigint;
   pct: number;
+  hasTargetAta?: boolean;
+  lotteryRank?: number;
 }
 
 /* ── Turn any thrown value into a useful string. web3.js/SPL sometimes throw non-Error objects
@@ -201,7 +199,7 @@ async function distributeTokens(
   const totalHolderBalance = holders.reduce((sum, h) => sum + h.balanceRaw, 0n);
   if (totalHolderBalance <= 0n) return results;
 
-  const BATCH_SIZE = 5; // each transfer also carries an ATA-create instruction, so keep batches small
+  const BATCH_SIZE = 8; // mixed transfer/create batches must stay under transaction size limits
   for (let i = 0; i < holders.length; i += BATCH_SIZE) {
     const batch = holders.slice(i, i + BATCH_SIZE);
     const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
@@ -212,7 +210,9 @@ async function distributeTokens(
       if (amountRaw <= 0n) continue;
       const dest = new PublicKey(h.address);
       const destAta = await getAssociatedTokenAddress(mintPubkey, dest, false, programId);
-      tx.add(createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey, programId));
+      if (!h.hasTargetAta) {
+        tx.add(createAssociatedTokenAccountIdempotentInstruction(keypair.publicKey, destAta, dest, mintPubkey, programId));
+      }
       tx.add(createTransferInstruction(sourceAta, destAta, keypair.publicKey, amountRaw, [], programId));
       included.push({ address: h.address, amountRaw: amountRaw.toString() });
     }
@@ -375,8 +375,37 @@ async function getTokenHolders(
   }));
 }
 
+async function getLotteryHolderSnapshot(
+  holderMint: string,
+  targetMint: PublicKey,
+  targetProgramId: PublicKey,
+  excludeOwner: PublicKey
+): Promise<TokenHolder[]> {
+  const holders = await getTokenHolders(holderMint, excludeOwner, 10_000);
+  const ataByOwner = new Map<string, PublicKey>();
+  for (const holder of holders) {
+    ataByOwner.set(
+      holder.address,
+      await getAssociatedTokenAddress(targetMint, new PublicKey(holder.address), false, targetProgramId)
+    );
+  }
+
+  const entries = [...ataByOwner.entries()];
+  const existing = new Set<string>();
+  for (let i = 0; i < entries.length; i += 100) {
+    const batch = entries.slice(i, i + 100);
+    const infos = await connection.getMultipleAccountsInfo(batch.map(([, ata]) => ata), "confirmed");
+    for (let j = 0; j < batch.length; j += 1) {
+      if (infos[j]) existing.add(batch[j][0]);
+    }
+  }
+
+  return holders.map((holder) => ({ ...holder, hasTargetAta: existing.has(holder.address) }));
+}
+
 async function executeRule(
   keypair: Keypair,
+  pipelineId: string,
   sourceMint: string,
   sourceAta: PublicKey | null,
   ruleAmountRaw: number,
@@ -422,36 +451,68 @@ async function executeRule(
       const programId = await getTokenProgramId(mintPk);
       const srcAta = await getAssociatedTokenAddress(mintPk, keypair.publicKey, false, programId);
 
-      // SOL mode: bucket the drop — recipient count scales with the fee pool, and each recipient's
-      // worst-case ATA rent is carved out of the pool BEFORE the swap so the distribution can pay
-      // for its own account creation. SPL mode has no lamport-denominated pool; use the flat cap.
-      let recipientLimit = MAX_DISTRIBUTE_RECIPIENTS;
       let swapAmountRaw = ruleAmountRaw;
-      let bucket: { recipients: number; rentBudgetLamports: number; swapLamports: number } | null = null;
+      let lottery:
+        | ReturnType<typeof planLotteryDistribution>
+        | null = null;
+      let holders: TokenHolder[] = [];
+
       if (isSol) {
-        bucket = planDistribution(ruleAmountRaw);
-        if (!bucket) {
+        const snapshot = await getLotteryHolderSnapshot(rule.holderMint, mintPk, programId, keypair.publicKey);
+        const seed = `${pipelineId}:${rule.holderMint}:${rule.targetMint}:${Date.now()}`;
+        lottery = planLotteryDistribution({
+          candidates: snapshot.map((holder) => ({
+            address: holder.address,
+            balanceRaw: holder.balanceRaw,
+            hasTargetAta: Boolean(holder.hasTargetAta),
+          })),
+          poolLamports: ruleAmountRaw,
+          seed,
+          maxRecipients: MAX_LOTTERY_RECIPIENTS,
+        });
+        if (!lottery) {
           return {
             type: "distribute", pct: rule.pct, skipped: true,
-            note: `pool of ${(ruleAmountRaw / 1e9).toFixed(6)} SOL is below the minimum bucket (needs ~${((2 * ATA_COST_LAMPORTS) / 1e9).toFixed(4)} SOL)`,
+            note: `pool of ${(ruleAmountRaw / 1e9).toFixed(6)} SOL cannot fund a lottery distribution after the minimum swap and recipient-cost reserve`,
+            lottery: { candidateHolders: snapshot.length, maxRecipients: MAX_LOTTERY_RECIPIENTS },
           };
         }
-        recipientLimit = bucket.recipients;
-        swapAmountRaw = bucket.swapLamports;
+        swapAmountRaw = lottery.swapLamports;
+        holders = lottery.recipients.map((recipient) => ({
+          address: recipient.address,
+          balanceRaw: recipient.balanceRaw,
+          pct: 0,
+          hasTargetAta: recipient.hasTargetAta,
+          lotteryRank: recipient.lotteryRank,
+        }));
+      } else {
+        holders = await getTokenHolders(rule.holderMint, keypair.publicKey, MAX_DISTRIBUTE_RECIPIENTS);
       }
 
       const pre = await ataBalance(srcAta, programId);
       const swapResult = await jupiterSwap(keypair, sourceMint, rule.targetMint, swapAmountRaw);
       const received = swapResult.actualOutAmountRaw ?? await waitForAtaDelta(srcAta, programId, pre);
 
-      const holders = await getTokenHolders(rule.holderMint, keypair.publicKey, recipientLimit);
       const distResults = received > 0n ? await distributeTokens(keypair, mintPk, srcAta, programId, holders, received) : [];
 
       return {
         type: "distribute", pct: rule.pct,
         swappedRaw: swapAmountRaw, receivedRaw: received.toString(),
         swapTxid: swapResult.txid, totalHolders: holders.length, distributed: distResults.length,
-        ...(bucket ? { bucket: { recipients: bucket.recipients, rentBudgetLamports: bucket.rentBudgetLamports } } : {}),
+        ...(lottery ? {
+          lottery: {
+            seed: lottery.seed,
+            candidateHolders: lottery.recipients.length + lottery.skippedForBudget,
+            selected: lottery.recipients.length,
+            existingAtaRecipients: lottery.ataExistingCount,
+            missingAtaRecipients: lottery.ataMissingCount,
+            estimatedRecipientCostLamports: lottery.estimatedCostLamports,
+            rentBudgetLamports: lottery.rentBudgetLamports,
+            missingAtaCostLamports: MISSING_ATA_RECIPIENT_COST_LAMPORTS,
+            skippedForBudget: lottery.skippedForBudget,
+            maxRecipients: MAX_LOTTERY_RECIPIENTS,
+          },
+        } : {}),
         distributions: distResults.slice(0, 20),
       };
     }
@@ -486,8 +547,8 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     const isSol = record.sourceMint === WSOL_MINT;
     let claimedLamports = 0;
 
-    // Step 0: claim Pump.fun creator fees (SOL). SOL-mode pipelines are allowed to spend only
-    // the net SOL increase from this claim, never existing wallet SOL.
+    // Step 0: collect Pump.fun creator fees when enabled. SOL-mode then checks whether the wallet
+    // has reached the money threshold before spending anything downstream.
     if (record.claimCreatorFees) {
       const claim = await claimCreatorFees(connection, keypair);
       claimedLamports = claim.claimedLamports ?? 0;
@@ -503,12 +564,9 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     let lamports = 0;
 
     if (isSol) {
-      // SOL mode: spend only rewards claimed in this run, minus a reserve left from those same
-      // rewards for swap/burn/distribution fees. Existing wallet SOL is never part of the split.
+      // SOL mode: spend wallet SOL only above the reserve, and only once the money threshold is met.
       lamports = await connection.getBalance(keypair.publicKey);
-      sourceBalance = record.claimCreatorFees
-        ? spendableClaimedRewardLamports(claimedLamports, lamports, SOL_RESERVE_LAMPORTS)
-        : 0;
+      sourceBalance = spendableWalletSolLamports(lamports, SOL_RESERVE_LAMPORTS);
     } else {
       // SPL mode: the amount to split is the source token's ATA balance. Derive the ATA with the
       // mint's ACTUAL token program (legacy vs Token-2022) — defaulting to the legacy program here
@@ -526,6 +584,13 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
         // stuck pipeline reports a reason the owner can actually see.
         return { ok: true, results, summary: "no source-token account on the wallet yet — nothing to split" };
       }
+    }
+
+    if (isSol && !shouldDropWalletSol(sourceBalance, MIN_SOL_DROP_LAMPORTS)) {
+      const summary = lamports <= SOL_RESERVE_LAMPORTS
+        ? `wallet has ${sol(lamports)} SOL but needs ${sol(SOL_RESERVE_LAMPORTS)} SOL reserve — nothing to spend`
+        : `wallet has ${sol(lamports)} SOL; spendable ${sol(sourceBalance)} SOL is below ${sol(MIN_SOL_DROP_LAMPORTS)} SOL drop threshold`;
+      return { ok: true, results, summary };
     }
 
     if (sourceBalance <= 0) {
@@ -563,7 +628,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       const ruleAmountRaw = Math.floor(sourceBalance * (rule.pct / 100));
       if (ruleAmountRaw <= 0) continue;
       try {
-        const result = await executeRule(keypair, record.sourceMint, sourceAta, ruleAmountRaw, rule, isSol);
+        const result = await executeRule(keypair, record.id, record.sourceMint, sourceAta, ruleAmountRaw, rule, isSol);
         results.push(result);
       } catch (err: unknown) {
         // Record the exact failure per-rule and keep going, so one run surfaces every problem

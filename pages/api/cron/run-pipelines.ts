@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { claimDuePipelineRun, listEnabledPipelines, recordRun, isDue } from "../../../lib/pipelineStore";
-import { runPipeline } from "../../../lib/pipelineExecutor";
+import { claimDuePipelineRun, listEnabledPipelines, recordRun } from "../../../lib/pipelineStore";
+import { runPipeline, WSOL_MINT } from "../../../lib/pipelineExecutor";
+import { isCronEligible } from "../../../lib/schedulerGate";
 
 /* ── GET /api/cron/run-pipelines ─────────────────────────────────────
    Triggered by Vercel Cron (see vercel.json). Vercel sends
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const summary: { id: string; ran: boolean; status?: string }[] = [];
 
   for (const record of pipelines) {
-    if (!force && !isDue(record, now)) {
+    if (!force && !isCronEligible(record, now, new Set([WSOL_MINT]))) {
       summary.push({ id: record.id, ran: false });
       continue;
     }
