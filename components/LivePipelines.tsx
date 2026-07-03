@@ -142,7 +142,11 @@ export default function LivePipelines() {
       {!loaded ? (
         <p className="text-xs text-slate-500 py-6 text-center">Loading…</p>
       ) : pipes.length === 0 ? (
-        <p className="text-xs text-slate-500 py-6 text-center">No live pipes yet.</p>
+        <div className="py-8 text-center">
+          <div className="text-2xl mb-2 opacity-60">🪄</div>
+          <p className="text-xs text-slate-400 font-medium">No live pipes yet</p>
+          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">Yours could be the first —<br />build one on the right.</p>
+        </div>
       ) : (
         <div className="live-viewport">
           <div className={`live-track ${scroll ? "is-scrolling" : ""}`}>
