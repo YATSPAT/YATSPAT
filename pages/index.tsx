@@ -280,6 +280,18 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Social links (mirrors the sidebar) */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
+                𝕏
+              </a>
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-xl bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-sm hover:bg-fuchsia-500/25 transition-colors">
+                💊
+              </a>
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Solscan" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
+                🔎
+              </a>
+            </div>
             <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #22d3ee)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
             {connected && (signedIn ? (
               <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all">
@@ -317,8 +329,6 @@ export default function Home() {
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 mb-2.5">Our token</h4>
             <TokenDetails />
           </div>
-
-          <LivePipelines />
         </div>
       </aside>
 
@@ -515,6 +525,11 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Live pipes — horizontal row along the bottom */}
+        <div className="mt-6">
+          <LivePipelines horizontal />
         </div>
       </section>
 

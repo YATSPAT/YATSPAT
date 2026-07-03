@@ -100,7 +100,7 @@ function PipeCard({ p }: { p: PublicPipeline }) {
   );
 }
 
-export default function LivePipelines() {
+export default function LivePipelines({ horizontal = false }: { horizontal?: boolean }) {
   const [pipes, setPipes] = useState<PublicPipeline[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -142,10 +142,20 @@ export default function LivePipelines() {
       {!loaded ? (
         <p className="text-xs text-slate-500 py-6 text-center">Loading…</p>
       ) : pipes.length === 0 ? (
-        <div className="py-8 text-center">
+        <div className={horizontal ? "py-5 text-center" : "py-8 text-center"}>
           <div className="text-2xl mb-2 opacity-60">🪄</div>
           <p className="text-xs text-slate-400 font-medium">No live pipes yet</p>
-          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">Yours could be the first —<br />build one on the right.</p>
+          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+            {horizontal ? "Yours could be the first — build one above." : <>Yours could be the first —<br />build one on the right.</>}
+          </p>
+        </div>
+      ) : horizontal ? (
+        <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+          {pipes.map((p) => (
+            <div key={p.id} className="w-72 shrink-0">
+              <PipeCard p={p} />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="live-viewport">
