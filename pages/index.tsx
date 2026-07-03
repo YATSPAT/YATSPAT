@@ -250,9 +250,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <a href="#builder" className="mt-8 inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
-          Build your pipeline below <span className="animate-bounce">↓</span>
-        </a>
       </section>
 
       {/* Three ways it stimulates your economy */}
@@ -294,7 +291,12 @@ export default function Home() {
           <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
+        <div className="grid lg:grid-cols-[280px_1fr_340px] gap-6 items-start">
+          {/* Left rail — live pipelines feed */}
+          <div className="hidden lg:block sticky top-32 order-first">
+            <LivePipelines />
+          </div>
+
           <div className="space-y-4">
             {!deployResult?.ok && (
               <div className="glass-card p-0 overflow-hidden flex flex-col" style={{ height: "560px" }}>
@@ -479,9 +481,6 @@ export default function Home() {
                   />
                 </div>
               </div>
-            </div>
-            <div className="mt-4">
-              <LivePipelines />
             </div>
           </div>
         </div>

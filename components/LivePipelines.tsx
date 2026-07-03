@@ -132,7 +132,7 @@ export default function LivePipelines() {
   return (
     <div className="glass-card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-cyan-300 tracking-wide">Active ATA Growth Jobs</h3>
+        <h3 className="text-sm font-bold text-cyan-300 tracking-wide">Live Pipes</h3>
         <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           {pipes.length} running
@@ -142,7 +142,7 @@ export default function LivePipelines() {
       {!loaded ? (
         <p className="text-xs text-slate-500 py-6 text-center">Loading…</p>
       ) : pipes.length === 0 ? (
-        <p className="text-xs text-slate-500 py-6 text-center">No ATA growth jobs running yet.</p>
+        <p className="text-xs text-slate-500 py-6 text-center">No live pipes yet.</p>
       ) : (
         <div className="live-viewport">
           <div className={`live-track ${scroll ? "is-scrolling" : ""}`}>
