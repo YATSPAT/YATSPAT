@@ -33,12 +33,11 @@ function fmtInterval(min: number): string {
   return `${min}m`;
 }
 
-type Tab = "all" | "live" | "pending" | "error";
+type Tab = "all" | "live" | "pending";
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "all pipes" },
   { key: "live", label: "live" },
   { key: "pending", label: "new" },
-  { key: "error", label: "needs attention" },
 ];
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -86,10 +85,9 @@ export default function PipelinesTable() {
   const targets = new Set(pipes.flatMap((p) => p.targetTokens)).size;
 
   const filtered = pipes.filter((p) => {
-    if (tab === "all") return true;
     if (tab === "live") return p.lastRunStatus === "success";
     if (tab === "pending") return !p.lastRunStatus;
-    return p.lastRunStatus === "error";
+    return true; // "all"
   });
 
   return (
