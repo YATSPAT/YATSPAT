@@ -238,11 +238,16 @@ export default function Home() {
           Wen Stimmy stimulates your token&apos;s economy in three ways — automatically, from the creator
           fees you&apos;re already earning. No private keys, no manual claims.
         </p>
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-xs">
-          {["🔒 Non-custodial", "⚡ Permissionless collection", "🎯 Set-and-forget"].map((chip) => (
-            <span key={chip} className="px-3 py-1.5 rounded-full bg-surface-800/70 border border-slate-700/50 text-slate-300">
-              {chip}
-            </span>
+        <div className="mt-7 grid grid-cols-3 gap-3 max-w-2xl mx-auto">
+          {[
+            { icon: "🔒", label: "Non-custodial" },
+            { icon: "⚡", label: "Permissionless collection" },
+            { icon: "🎯", label: "Set-and-forget" },
+          ].map((c) => (
+            <div key={c.label} className="glass-card px-3 py-3 flex flex-col items-center gap-1.5 text-center">
+              <span className="text-lg">{c.icon}</span>
+              <span className="text-xs sm:text-sm text-slate-300 font-medium leading-tight">{c.label}</span>
+            </div>
           ))}
         </div>
         <a href="#builder" className="mt-8 inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
@@ -270,7 +275,7 @@ export default function Home() {
               n: "3",
               icon: "🎁",
               title: "Rewards",
-              body: "Reward your own holders — route fees straight back to the wallets already holding your coin. Loyalty that pays.",
+              body: "Send fees back to your loyal holders — route rewards straight to the wallets already holding your coin.",
             },
           ].map((s) => (
             <div key={s.n} className="glass-card p-5 text-left relative overflow-hidden">
