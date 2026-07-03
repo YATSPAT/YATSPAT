@@ -134,7 +134,9 @@ function TokenInfo() {
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-amber-400/80">Coming soon</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
+                🚀 Not launched yet
+              </span>
             )}
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
