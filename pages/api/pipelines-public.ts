@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabase } from "../../lib/supabase";
 import { PLATFORM_FEE_BPS } from "../../lib/platformFee";
+import { fetchTokenMeta } from "../../lib/tokenMeta";
 
 /* ── GET /api/pipelines-public ───────────────────────────────────────
    Public, read-only, display-safe snapshot of running pipelines.
@@ -26,13 +27,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Explicit safe columns only — must never include encrypted_keypair.
     const { data, error } = await getSupabase()
       .from("pipelines")
-      .select("id, source_mint, source_wallet, rules, interval_minutes, claim_creator_fees, last_run_at, last_run_status, last_run_summary, created_at")
+      .select("id, source_mint, fee_mint, source_wallet, rules, interval_minutes, claim_creator_fees, last_run_at, last_run_status, last_run_summary, created_at")
       .eq("enabled", true)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
 
-    const pipelines = (data || []).map((p: any) => {
+    const rows = (data || []).map((p: any) => {
       const rules = Array.isArray(p.rules) ? p.rules : [];
       // Target tokens = the mints each rule buys / burns / distributes (deduped, minus empties and wSOL).
       const targetTokens: string[] = Array.from(
@@ -42,10 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .filter((m: string) => m && m !== WSOL_MINT)
         )
       );
+      // The token that represents this pipe: the mint whose creator fees it collects,
+      // else the first token it targets.
+      const primaryMint: string | null = (p.fee_mint || "").trim() || targetTokens[0] || null;
       return {
         id: String(p.id).slice(0, 8),
         wallet: maskWallet(p.source_wallet),
         source: p.claim_creator_fees ? "creator-rewards" : p.source_mint || null,
+        feeMint: (p.fee_mint || "").trim() || null,
+        primaryMint,
         targetTokens,
         rules: rules.map((r: any) => ({ type: r.type, pct: r.pct })),
         intervalMinutes: p.interval_minutes,
@@ -53,6 +59,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         lastRunSummary: p.last_run_summary ?? null,
         lastRunAt: p.last_run_at ?? null,
         createdAt: p.created_at,
+      };
+    });
+
+    // Enrich each pipe's primary token with name + image (Helius DAS; degrades gracefully).
+    const meta = await fetchTokenMeta(rows.map((p) => p.primaryMint).filter(Boolean) as string[]);
+    const pipelines = rows.map((p) => {
+      const m = p.primaryMint ? meta.get(p.primaryMint) : undefined;
+      return {
+        ...p,
+        token: p.primaryMint
+          ? { mint: p.primaryMint, name: m?.name || "", symbol: m?.symbol || "", image: m?.image || null }
+          : null,
       };
     });
 

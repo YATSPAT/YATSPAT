@@ -4,10 +4,19 @@ interface PublicRule {
   type: string;
   pct: number;
 }
+interface TokenInfo {
+  mint: string;
+  name: string;
+  symbol: string;
+  image: string | null;
+}
 interface PublicPipeline {
   id: string;
   wallet: string | null;
   source: string | null;
+  feeMint?: string | null;
+  primaryMint?: string | null;
+  token?: TokenInfo | null;
   targetTokens: string[];
   rules: PublicRule[];
   intervalMinutes: number;
@@ -52,6 +61,58 @@ function StatusBadge({ status }: { status: string | null }) {
       <span className={`w-1.5 h-1.5 rounded-full ${map.dot} animate-pulse`} />
       {map.label}
     </span>
+  );
+}
+
+/* A pipeline's token as a card for the carousel — image + name. */
+function TokenCard({ p }: { p: PublicPipeline }) {
+  const [imgErr, setImgErr] = useState(false);
+  const t = p.token;
+  const mint = t?.mint || p.primaryMint || "";
+  const name = t?.name || (mint ? shortMint(mint) : "Unknown token");
+  const initial = (name.trim()[0] || "?").toUpperCase();
+  const showImg = t?.image && !imgErr;
+  const action = p.rules.map((r) => `${ACTION_LABEL[r.type] ?? r.type} ${r.pct}%`).join(" · ");
+
+  return (
+    <a
+      href={mint ? `https://pump.fun/coin/${mint}` : "#"}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block w-52 shrink-0 snap-start glass-card p-4 hover:brightness-110 transition"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="relative shrink-0">
+          {showImg ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={t!.image as string}
+              alt={name}
+              onError={() => setImgErr(true)}
+              className="w-12 h-12 rounded-full object-cover border border-white/10"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-lg font-bold text-white">
+              {initial}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-white truncate">{name}</div>
+          {t?.symbol ? (
+            <div className="text-[11px] text-cyan-300 truncate">${t.symbol}</div>
+          ) : mint ? (
+            <div className="text-[10px] font-mono text-slate-500 truncate">{shortMint(mint)}</div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <StatusBadge status={p.lastRunStatus} />
+        <span className="text-[10px] font-mono text-slate-500 shrink-0">every {fmtInterval(p.intervalMinutes)}</span>
+      </div>
+      {action && <div className="mt-2 text-[11px] text-slate-400 truncate">{action}</div>}
+    </a>
   );
 }
 
@@ -121,63 +182,22 @@ export default function PipelinesTable() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[560px]">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-white/[0.05]">
-                <th className="px-4 py-3 font-medium">Pipe</th>
-                <th className="px-4 py-3 font-medium">Action</th>
-                <th className="px-4 py-3 font-medium">Targets</th>
-                <th className="px-4 py-3 font-medium">Every</th>
-                <th className="px-4 py-3 font-medium text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!loaded ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500 text-xs">Loading…</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-12 text-center">
-                  <div className="text-2xl mb-2 opacity-60">🪄</div>
-                  <p className="text-xs text-slate-400 font-medium">No pipes here yet</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Build the first one below.</p>
-                </td></tr>
-              ) : (
-                filtered.map((p) => (
-                  <tr key={p.id} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-300">{p.wallet ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {p.rules.map((r, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded-md bg-surface-900/70 border border-white/[0.05] text-[11px] text-slate-300">
-                            {ACTION_LABEL[r.type] ?? r.type} {r.pct}%
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {p.targetTokens.length ? (
-                          p.targetTokens.map((t) => (
-                            <a key={t} href={`https://solscan.io/token/${t}`} target="_blank" rel="noopener noreferrer" className="px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 font-mono text-[11px] hover:bg-fuchsia-500/25 transition">
-                              {shortMint(t)}
-                            </a>
-                          ))
-                        ) : (
-                          <span className="text-[11px] text-slate-500">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-cyan-300">{fmtInterval(p.intervalMinutes)}</td>
-                    <td className="px-4 py-3 text-right"><StatusBadge status={p.lastRunStatus} /></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Carousel — one token card per pipe */}
+      {!loaded ? (
+        <div className="glass-card py-10 text-center text-slate-500 text-xs">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="glass-card py-12 text-center">
+          <div className="text-2xl mb-2 opacity-60">🪄</div>
+          <p className="text-xs text-slate-400 font-medium">No pipes here yet</p>
+          <p className="text-[11px] text-slate-500 mt-1">Build the first one below.</p>
         </div>
-      </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
+          {filtered.map((p) => (
+            <TokenCard key={p.id} p={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
