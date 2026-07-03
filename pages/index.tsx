@@ -238,18 +238,6 @@ export default function Home() {
           Wen Stimmy stimulates your token&apos;s economy in three ways — automatically, from the creator
           fees you&apos;re already earning. No private keys, no manual claims.
         </p>
-        <div className="mt-7 grid grid-cols-3 gap-3 max-w-2xl mx-auto">
-          {[
-            { icon: "🔒", label: "Non-custodial" },
-            { icon: "⚡", label: "Permissionless collection" },
-            { icon: "🎯", label: "Set-and-forget" },
-          ].map((c) => (
-            <div key={c.label} className="glass-card px-3 py-3 flex flex-col items-center gap-1.5 text-center">
-              <span className="text-lg">{c.icon}</span>
-              <span className="text-xs sm:text-sm text-slate-300 font-medium leading-tight">{c.label}</span>
-            </div>
-          ))}
-        </div>
       </section>
 
       {/* Three ways it stimulates your economy */}
@@ -276,9 +264,11 @@ export default function Home() {
             },
           ].map((s) => (
             <div key={s.n} className="glass-card p-5 text-left relative overflow-hidden">
-              <div className="absolute -top-3 -right-2 text-7xl font-black text-white/[0.04] select-none">{s.n}</div>
-              <div className="text-2xl mb-2">{s.icon}</div>
-              <h3 className="text-white font-semibold mb-1">{s.title}</h3>
+              <div className="absolute -bottom-4 -right-1 text-7xl font-black text-white/[0.04] select-none">{s.n}</div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <h3 className="text-white font-semibold">{s.title}</h3>
+                <span className="text-2xl leading-none">{s.icon}</span>
+              </div>
               <p className="text-sm text-slate-400 leading-relaxed">{s.body}</p>
             </div>
           ))}
