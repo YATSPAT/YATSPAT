@@ -83,6 +83,88 @@ function rulesTotal(rules?: DraftRule[]): number {
   return (rules || []).reduce((s, r) => s + (r.pct || 0), 0);
 }
 
+// ── Our token. Fill in the real values (mint + socials) to populate the sidebar. ──
+const STIMMY = {
+  ticker: "$STIMMY",
+  mint: "", // TODO: the $STIMMY mint address
+  x: "", // TODO: https://x.com/...
+  telegram: "", // TODO: https://t.me/...
+  blurb:
+    "The token behind the panel. Wen Stimmy runs its own Pump.fun creator fees through this exact tool — the airdrop machine eating its own cooking.",
+};
+
+function shortMint(m: string): string {
+  return m.length > 12 ? `${m.slice(0, 5)}…${m.slice(-5)}` : m;
+}
+
+function TokenInfo() {
+  const [open, setOpen] = useState(false);
+  const hasMint = STIMMY.mint.trim().length > 0;
+  return (
+    <div className="glass-card overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-surface-700/30 transition-colors"
+      >
+        <span className="flex items-center gap-2.5 min-w-0">
+          <Logo className="w-8 h-8 shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-white leading-tight">Wen Stimmy</span>
+            <span className="block text-[11px] text-cyan-300 leading-tight">Click to see our token info</span>
+          </span>
+        </span>
+        <svg viewBox="0 0 20 20" className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none">
+          <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-slate-700/40">
+          <p className="text-xs text-slate-400 leading-relaxed">{STIMMY.blurb}</p>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400 text-xs">Ticker</span>
+            <span className="text-white font-mono text-xs">{STIMMY.ticker}</span>
+          </div>
+          <div>
+            <span className="text-slate-400 text-xs block mb-1">Contract</span>
+            {hasMint ? (
+              <div className="flex gap-2">
+                <code className="glass-input font-mono text-[11px] flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
+                <button className="btn-secondary text-xs shrink-0 py-1.5 px-3" onClick={() => navigator.clipboard?.writeText(STIMMY.mint)}>
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs text-amber-400/80">Coming soon</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {hasMint && (
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
+                Pump.fun ↗
+              </a>
+            )}
+            {hasMint && (
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+                Solscan ↗
+              </a>
+            )}
+            {STIMMY.x && (
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+                𝕏 ↗
+              </a>
+            )}
+            {STIMMY.telegram && (
+              <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+                Telegram ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut } = useSiws();
@@ -220,71 +302,19 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative max-w-6xl mx-auto pt-32 pb-10 px-4 text-center">
-        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-400/30 text-fuchsia-200 text-xs font-medium tracking-wide">
-          <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
-          Automated Pump.fun fee routing
-        </span>
-        <h1 className="mt-6 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.05]">
-          Airdrop{" "}
-          <span className="italic bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">
-            anyone
-          </span>
-          <br className="hidden sm:block" />{" "}
-          with Pump.fun creator fees
-        </h1>
-        <p className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed">
-          Wen Stimmy stimulates your token&apos;s economy in three ways — automatically, from the creator
-          fees you&apos;re already earning. No private keys, no manual claims.
-        </p>
-      </section>
-
-      {/* Three ways it stimulates your economy */}
-      <section className="relative max-w-5xl mx-auto pb-14 px-4">
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            {
-              n: "1",
-              icon: "📣",
-              title: "Exposure",
-              body: "Airdrop your coin to holders of any other token — get in front of up to 245 accounts for as little as 0.5 SOL.",
-            },
-            {
-              n: "2",
-              icon: "🔥",
-              title: "Deflation",
-              body: "Buy back and burn — the classic Pump.fun didn't want you to have. Swap fees back into your coin and burn them forever. Less supply, more value.",
-            },
-            {
-              n: "3",
-              icon: "🎁",
-              title: "Rewards",
-              body: "Send fees back to your loyal holders — route rewards straight to the wallets already holding your coin.",
-            },
-          ].map((s) => (
-            <div key={s.n} className="glass-card p-5 text-left relative overflow-hidden">
-              <div className="absolute -bottom-4 -right-1 text-7xl font-black text-white/[0.04] select-none">{s.n}</div>
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <h3 className="text-white font-semibold">{s.title}</h3>
-                <span className="text-2xl leading-none">{s.icon}</span>
-              </div>
-              <p className="text-sm text-slate-400 leading-relaxed">{s.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="builder" className="relative max-w-6xl mx-auto pb-16 px-4 scroll-mt-28">
+      <section className="relative max-w-6xl mx-auto pt-28 pb-16 px-4">
         <div className="flex items-center gap-3 mb-6">
           <h2 className="text-2xl font-bold text-white tracking-tight">Build your pipeline</h2>
           <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
         </div>
 
         <div className="grid lg:grid-cols-[280px_1fr_340px] gap-6 items-start">
-          {/* Left rail — live pipelines feed */}
-          <div className="hidden lg:block sticky top-32 order-first">
-            <LivePipelines />
+          {/* Left rail — our token + live pipelines feed */}
+          <div className="lg:sticky lg:top-32 lg:order-first space-y-4">
+            <TokenInfo />
+            <div className="hidden lg:block">
+              <LivePipelines />
+            </div>
           </div>
 
           <div className="space-y-4">
