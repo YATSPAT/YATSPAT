@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
-import LivePipelines from "../components/LivePipelines";
+import PipelinesTable from "../components/PipelinesTable";
 import { formatInterval, SCHEDULE_PRESETS } from "../lib/schedule";
 
 type RuleType = "burn" | "buy-burn" | "distribute" | "send";
@@ -225,29 +225,21 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-purple-900/40 overflow-hidden">
+    <main id="top" className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-purple-900/40 overflow-hidden">
       <CircuitBackground />
 
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-nowrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setMenuOpen(true)}
-              aria-label="Open token menu"
-              className="btn-secondary !p-2.5 !rounded-xl shrink-0"
-            >
-              <svg viewBox="0 0 20 20" className="w-5 h-5 text-slate-200" fill="none">
-                <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </button>
-            <Logo className="w-10 h-10 shrink-0 hidden sm:block" />
-            <div className="min-w-0">
-              <span className="block text-lg font-bold text-white tracking-tight">Wen Stimmy?</span>
-              <p className="text-xs text-slate-300 flex items-center gap-2">
-                <span className="hidden sm:inline">ATA Holder Growth Panel</span>
-                <span className="px-1.5 py-px rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] uppercase tracking-wider">MAINNET</span>
-              </p>
-            </div>
+          <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+            <a href="#top" className="flex items-center gap-2.5 shrink-0">
+              <Logo className="w-9 h-9 shrink-0" />
+              <span className="text-lg font-bold text-white tracking-tight hidden sm:block">wen stimmy</span>
+            </a>
+            <nav className="flex items-center gap-1 text-sm">
+              <a href="#pipes" className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">pipes</a>
+              <a href="#create" className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">create</a>
+              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">token</button>
+            </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Social links (mirrors the sidebar) */}
@@ -302,9 +294,54 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className="relative max-w-6xl mx-auto pt-28 pb-16 px-4">
+      {/* Ticker strip */}
+      <div className="pt-[68px] border-b border-white/[0.05] bg-surface-900/60 overflow-hidden">
+        <div className="flex whitespace-nowrap animate-[ticker_28s_linear_infinite] py-2.5">
+          {[...Array(2)].flatMap((_, dup) =>
+            [
+              "📣 Airdrop up to 245 accounts for 0.5 SOL",
+              "🔥 Buy back & burn — the classic pump.fun didn't give you",
+              "🎁 Reward your own holders automatically",
+              "⚡ Permissionless collection · non-custodial",
+              "◎ Runs on Pump.fun creator fees you already earn",
+            ].map((t, i) => (
+              <span key={`${dup}-${i}`} className="inline-flex items-center gap-2 px-6 text-xs font-mono text-slate-400">
+                {t}<span className="text-slate-700">•</span>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Hero */}
+      <section className="relative max-w-4xl mx-auto pt-16 pb-10 px-4 text-center">
+        <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.05]">
+          Airdrop{" "}
+          <span className="italic bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">anyone</span>{" "}
+          with pump.fun creator fees.
+        </h1>
+        <p className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed">
+          Route your token&apos;s creator fees into on-chain growth — airdrop holders, buy back and burn, or reward
+          your community. Automatically, non-custodially, from fees you already earn.
+        </p>
+        <div className="mt-7 flex items-center justify-center gap-3">
+          <a href="#create" className="btn-deploy inline-block !py-3 !px-7">⚡ Create a pipeline</a>
+          <a href="#pipes" className="btn-secondary inline-block !py-3 !px-6">See live pipes</a>
+        </div>
+      </section>
+
+      {/* Live pipes dashboard (perpad listings-table analog) */}
+      <section id="pipes" className="relative max-w-6xl mx-auto pb-14 px-4 scroll-mt-24">
+        <div className="flex items-center gap-3 mb-5">
+          <h2 className="text-2xl font-bold text-white tracking-tight">Live pipes</h2>
+          <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
+        </div>
+        <PipelinesTable />
+      </section>
+
+      <section id="create" className="relative max-w-6xl mx-auto pb-16 px-4 scroll-mt-24">
         <div className="flex items-center gap-3 mb-6">
-          <h2 className="text-2xl font-bold text-white tracking-tight">Build your pipeline</h2>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Create a pipe</h2>
           <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
         </div>
 
@@ -586,11 +623,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Live pipes — horizontal row along the bottom */}
-        <div className="mt-6">
-          <LivePipelines horizontal />
         </div>
       </section>
 
