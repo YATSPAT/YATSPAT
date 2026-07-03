@@ -97,72 +97,52 @@ function shortMint(m: string): string {
   return m.length > 12 ? `${m.slice(0, 5)}…${m.slice(-5)}` : m;
 }
 
-function TokenInfo() {
-  const [open, setOpen] = useState(false);
+function TokenDetails() {
   const hasMint = STIMMY.mint.trim().length > 0;
   return (
-    <div className="glass-card overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-surface-700/30 transition-colors"
-      >
-        <span className="flex items-center gap-2.5 min-w-0">
-          <Logo className="w-8 h-8 shrink-0" />
-          <span className="min-w-0">
-            <span className="block text-sm font-bold text-white leading-tight">Wen Stimmy</span>
-            <span className="block text-[11px] text-cyan-300 leading-tight">Click to see our token info</span>
+    <div className="space-y-3">
+      <p className="text-xs text-slate-400 leading-relaxed">{STIMMY.blurb}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-slate-400 text-xs">Ticker</span>
+        <span className="text-white font-mono text-xs">{STIMMY.ticker}</span>
+      </div>
+      <div>
+        <span className="text-slate-400 text-xs block mb-1">Contract</span>
+        {hasMint ? (
+          <div className="flex gap-2">
+            <code className="glass-input font-mono text-[11px] flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
+            <button className="btn-secondary text-xs shrink-0 py-1.5 px-3" onClick={() => navigator.clipboard?.writeText(STIMMY.mint)}>
+              Copy
+            </button>
+          </div>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
+            🚀 Not launched yet
           </span>
-        </span>
-        <svg viewBox="0 0 20 20" className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none">
-          <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && (
-        <div className="px-4 pb-4 pt-3 space-y-3 border-t border-slate-700/40">
-          <p className="text-xs text-slate-400 leading-relaxed">{STIMMY.blurb}</p>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400 text-xs">Ticker</span>
-            <span className="text-white font-mono text-xs">{STIMMY.ticker}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 text-xs block mb-1">Contract</span>
-            {hasMint ? (
-              <div className="flex gap-2">
-                <code className="glass-input font-mono text-[11px] flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
-                <button className="btn-secondary text-xs shrink-0 py-1.5 px-3" onClick={() => navigator.clipboard?.writeText(STIMMY.mint)}>
-                  Copy
-                </button>
-              </div>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
-                🚀 Not launched yet
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {hasMint && (
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
-                Pump.fun ↗
-              </a>
-            )}
-            {hasMint && (
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
-                Solscan ↗
-              </a>
-            )}
-            {STIMMY.x && (
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
-                𝕏 ↗
-              </a>
-            )}
-            {STIMMY.telegram && (
-              <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
-                Telegram ↗
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        {hasMint && (
+          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
+            Pump.fun ↗
+          </a>
+        )}
+        {hasMint && (
+          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+            Solscan ↗
+          </a>
+        )}
+        {STIMMY.x && (
+          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+            𝕏 ↗
+          </a>
+        )}
+        {STIMMY.telegram && (
+          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+            Telegram ↗
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -179,6 +159,7 @@ export default function Home() {
   const [deployResult, setDeployResult] = useState<any>(null);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -280,7 +261,16 @@ export default function Home() {
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-nowrap items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <Logo className="w-10 h-10 shrink-0" />
+            <button
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open token menu"
+              className="btn-secondary !p-2.5 !rounded-xl shrink-0"
+            >
+              <svg viewBox="0 0 20 20" className="w-5 h-5 text-slate-200" fill="none">
+                <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </button>
+            <Logo className="w-10 h-10 shrink-0 hidden sm:block" />
             <div className="min-w-0">
               <span className="block text-lg font-bold text-white tracking-tight">Wen Stimmy?</span>
               <p className="text-xs text-slate-300 flex items-center gap-2">
@@ -304,21 +294,41 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Slide-out sidebar (opened from the header menu button) */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setMenuOpen(false)}
+      />
+      <aside
+        className={`fixed top-0 left-0 z-[70] h-full w-80 max-w-[85vw] transform transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="h-full glass-card rounded-none rounded-r-2xl overflow-y-auto p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2.5">
+              <Logo className="w-8 h-8" />
+              <span className="text-base font-bold text-white">Wen Stimmy</span>
+            </span>
+            <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="text-slate-400 hover:text-white p-1">
+              <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            </button>
+          </div>
+
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 mb-2.5">Our token</h4>
+            <TokenDetails />
+          </div>
+
+          <LivePipelines />
+        </div>
+      </aside>
+
       <section className="relative max-w-6xl mx-auto pt-28 pb-16 px-4">
         <div className="flex items-center gap-3 mb-6">
           <h2 className="text-2xl font-bold text-white tracking-tight">Build your pipeline</h2>
           <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
         </div>
 
-        <div className="grid lg:grid-cols-[280px_1fr_340px] gap-6 items-start">
-          {/* Left rail — our token + live pipelines feed */}
-          <div className="lg:sticky lg:top-32 lg:order-first space-y-4">
-            <TokenInfo />
-            <div className="hidden lg:block">
-              <LivePipelines />
-            </div>
-          </div>
-
+        <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="space-y-4">
             {!deployResult?.ok && (
               <div className="glass-card p-0 overflow-hidden flex flex-col" style={{ height: "560px" }}>
