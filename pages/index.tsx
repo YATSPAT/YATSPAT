@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import LivePipelines from "../components/LivePipelines";
-import { formatInterval } from "../lib/schedule";
+import { formatInterval, SCHEDULE_PRESETS } from "../lib/schedule";
 
 type RuleType = "burn" | "buy-burn" | "distribute" | "send";
 
@@ -20,12 +20,6 @@ interface Draft {
   rules?: DraftRule[];
   intervalMinutes?: number;
   dropThresholdSol?: number;
-  readyToDeploy?: boolean;
-}
-
-interface ChatTurn {
-  role: "user" | "assistant";
-  content: string;
 }
 
 const RULE_LABEL: Record<RuleType, string> = {
@@ -35,8 +29,14 @@ const RULE_LABEL: Record<RuleType, string> = {
   send: "Send to wallet",
 };
 
-const GREETING =
-  "Hi! I'll set up your ATA growth pipeline. It collects your Pump.fun token's creator fees and uses them to grow your holder count automatically — the panel generates a wallet you'll set as your token's fee receiver, so you never share a private key. To start: what's your token's mint address?";
+// Which rule actions the form offers, with the value-prop framing.
+const RULE_OPTIONS: { type: RuleType; label: string; hint: string }[] = [
+  { type: "distribute", label: "📣 Airdrop to holders", hint: "Send the swapped token to holders of another token (Exposure) or your own (Rewards)." },
+  { type: "buy-burn", label: "🔥 Buy back & burn", hint: "Swap fees into a token and burn it forever (Deflation)." },
+  { type: "send", label: "💸 Send to a wallet", hint: "Route the SOL straight to a wallet you choose." },
+];
+
+const newRule = (): DraftRule => ({ type: "distribute", pct: 0, targetMint: "", targetWallet: "", holderMint: "" });
 
 function Logo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -151,54 +151,25 @@ export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut } = useSiws();
 
-  const [turns, setTurns] = useState<ChatTurn[]>([{ role: "assistant", content: GREETING }]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const [draft, setDraft] = useState<Draft>({});
+  const [draft, setDraft] = useState<Draft>({ rules: [{ ...newRule(), pct: 100 }], intervalMinutes: 60 });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [turns, sending]);
+  const rules = draft.rules || [];
+  const setRules = (r: DraftRule[]) => setDraft((d) => ({ ...d, rules: r }));
+  const addRule = () => setRules([...rules, newRule()]);
+  const removeRule = (i: number) => setRules(rules.filter((_, idx) => idx !== i));
+  const updateRule = (i: number, patch: Partial<DraftRule>) =>
+    setRules(rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
-  const rulesOk = (draft.rules?.length || 0) > 0 && rulesTotal(draft.rules) === 100;
+  const total = rulesTotal(rules);
+  const rulesOk = rules.length > 0 && total === 100;
   const mintOk = !!draft.feeMint?.trim();
-  const configComplete = mintOk && rulesOk;
-  const canDeploy = configComplete && draft.readyToDeploy === true;
+  const canCreate = mintOk && rulesOk;
   const activated = activateResult?.activated === true;
-
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || sending) return;
-    const nextTurns: ChatTurn[] = [...turns, { role: "user", content: text.trim() }];
-    setTurns(nextTurns);
-    setInput("");
-    setSending(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: nextTurns.map((t) => ({ role: t.role, content: t.content })),
-          draft,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "chat request failed");
-
-      setDraft((prev) => ({ ...prev, ...data.draftPatch }));
-      setTurns((prev) => [...prev, { role: "assistant", content: data.reply }]);
-    } catch (err: any) {
-      setTurns((prev) => [...prev, { role: "assistant", content: `⚠️ ${err.message} — try again.` }]);
-    } finally {
-      setSending(false);
-    }
-  };
 
   const deploy = async () => {
     setDeploying(true);
@@ -248,8 +219,7 @@ export default function Home() {
   };
 
   const resetAll = () => {
-    setTurns([{ role: "assistant", content: GREETING }]);
-    setDraft({});
+    setDraft({ rules: [{ ...newRule(), pct: 100 }], intervalMinutes: 60 });
     setDeployResult(null);
     setActivateResult(null);
   };
@@ -341,61 +311,152 @@ export default function Home() {
         <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="space-y-4">
             {!deployResult?.ok && (
-              <div className="glass-card p-0 overflow-hidden flex flex-col" style={{ height: "560px" }}>
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4">
-                  {turns.map((t, i) => (
-                    <div key={i} className={`flex ${t.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                          t.role === "user"
-                            ? "bg-gradient-to-br from-fuchsia-500/25 to-cyan-500/20 border border-fuchsia-400/30 text-white"
-                            : "bg-surface-800/70 border border-slate-700/40 text-slate-200"
-                        }`}
-                      >
-                        {t.content}
-                      </div>
-                    </div>
-                  ))}
-                  {sending && (
-                    <div className="flex justify-start">
-                      <div className="rounded-2xl px-4 py-2.5 text-sm bg-surface-800/70 border border-slate-700/40 text-slate-400">
-                        Thinking…
-                      </div>
-                    </div>
-                  )}
+              <form
+                className="glass-card p-6 space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (canCreate && !deploying) deploy();
+                }}
+              >
+                {/* Token */}
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-1.5">Your token</label>
+                  <input
+                    className="glass-input font-mono text-sm"
+                    value={draft.feeMint || ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, feeMint: e.target.value }))}
+                    placeholder="Pump.fun token mint address"
+                  />
+                  <p className="text-xs text-slate-500 mt-1.5">The token whose Pump.fun creator fees this pipeline collects.</p>
                 </div>
 
-                <div className="p-4 border-t border-slate-700/40 space-y-3">
-                  <form
-                    className="flex gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      sendMessage(input);
-                    }}
+                {/* Rules */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-white">Where the fees go</label>
+                    <span className={`text-xs font-mono ${total === 100 ? "text-emerald-400" : "text-amber-400"}`}>{total}% / 100%</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {rules.map((rule, i) => (
+                      <div key={i} className="rounded-xl border border-white/[0.05] bg-surface-900/60 p-3 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="glass-input text-sm !py-2 flex-1"
+                            value={rule.type}
+                            onChange={(e) => updateRule(i, { type: e.target.value as RuleType })}
+                          >
+                            {RULE_OPTIONS.map((o) => (
+                              <option key={o.type} value={o.type}>{o.label}</option>
+                            ))}
+                          </select>
+                          {rules.length > 1 && (
+                            <button type="button" onClick={() => removeRule(i)} className="text-xs text-rose-400 hover:text-rose-300 px-2 shrink-0">
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={rule.pct}
+                            onChange={(e) => updateRule(i, { pct: Math.max(0, Math.min(100, Number(e.target.value))) })}
+                            className="flex-1"
+                            style={{ background: `linear-gradient(to right, #d946ef ${rule.pct}%, #1e293b ${rule.pct}%)` }}
+                          />
+                          <span className="w-12 text-right font-mono text-sm text-cyan-300">{rule.pct}%</span>
+                        </div>
+
+                        {rule.type === "distribute" && (
+                          <>
+                            <input
+                              className="glass-input font-mono text-xs"
+                              value={rule.holderMint || ""}
+                              onChange={(e) => updateRule(i, { holderMint: e.target.value })}
+                              placeholder="Airdrop to holders of this token mint…"
+                            />
+                            <input
+                              className="glass-input font-mono text-xs"
+                              value={rule.targetMint || ""}
+                              onChange={(e) => updateRule(i, { targetMint: e.target.value })}
+                              placeholder="Token to airdrop (usually your own mint)…"
+                            />
+                          </>
+                        )}
+                        {rule.type === "buy-burn" && (
+                          <input
+                            className="glass-input font-mono text-xs"
+                            value={rule.targetMint || ""}
+                            onChange={(e) => updateRule(i, { targetMint: e.target.value })}
+                            placeholder="Token mint to buy back & burn…"
+                          />
+                        )}
+                        {rule.type === "send" && (
+                          <input
+                            className="glass-input font-mono text-xs"
+                            value={rule.targetWallet || ""}
+                            onChange={(e) => updateRule(i, { targetWallet: e.target.value })}
+                            placeholder="Destination wallet address…"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addRule}
+                    className="mt-3 w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300 transition-colors"
                   >
-                    <input
-                      className="glass-input text-sm flex-1"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Type your answer…"
-                      disabled={sending}
-                    />
-                    <button className="btn-primary shrink-0" type="submit" disabled={sending || !input.trim()}>
-                      Send
-                    </button>
-                  </form>
-                  {canDeploy && (
-                    <button className="btn-deploy w-full" onClick={deploy} disabled={deploying}>
-                      {deploying ? "Creating…" : "⚡ Create Pipeline"}
-                    </button>
-                  )}
-                  {deployResult && !deployResult.ok && (
-                    <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
-                      {deployResult.error || "Create failed"}
-                    </div>
-                  )}
+                    + Add another
+                  </button>
+                  {total !== 100 && <p className="text-xs text-amber-400 mt-2">Percentages must add up to 100%.</p>}
                 </div>
-              </div>
+
+                {/* Schedule */}
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-2">How often to check</label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {SCHEDULE_PRESETS.map((p) => (
+                      <button
+                        type="button"
+                        key={p.minutes}
+                        onClick={() => setDraft((d) => ({ ...d, intervalMinutes: p.minutes }))}
+                        className={`px-2 py-2 rounded-lg text-xs font-mono transition-all ${
+                          (draft.intervalMinutes || 60) === p.minutes
+                            ? "bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-200"
+                            : "bg-surface-900/60 border border-slate-700/40 text-slate-300 hover:border-slate-500/50"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="block text-xs text-slate-400 mt-4 mb-1.5">SOL drop threshold (optional)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={draft.dropThresholdSol ?? ""}
+                    onChange={(e) => setDraft((d) => ({ ...d, dropThresholdSol: e.target.value === "" ? undefined : Number(e.target.value) }))}
+                    placeholder="0.5 (default)"
+                    className="glass-input font-mono text-sm"
+                  />
+                  <p className="text-xs text-slate-500 mt-1.5">Fees accumulate until spendable SOL passes this, then a round fires.</p>
+                </div>
+
+                <button className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
+                  {deploying ? "Creating…" : "⚡ Create pipeline"}
+                </button>
+                {deployResult && !deployResult.ok && (
+                  <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
+                    {deployResult.error || "Create failed"}
+                  </div>
+                )}
+              </form>
             )}
 
             {deployResult?.ok && !activated && (
@@ -510,14 +571,14 @@ export default function Home() {
               <div className="mt-4 pt-3 border-t border-slate-700/40">
                 <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1.5">
                   <span>Progress:</span>
-                  <span className={activated ? "text-emerald-400" : "text-amber-400"}>{activated ? "Live" : canDeploy ? "Ready to create" : "Configuring"}</span>
+                  <span className={activated ? "text-emerald-400" : "text-amber-400"}>{activated ? "Live" : canCreate ? "Ready to create" : "Configuring"}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 transition-all"
                     style={{
                       width: `${
-                        ([mintOk, rulesOk, draft.readyToDeploy === true, deployResult?.ok, activated].filter(Boolean).length / 5) * 100
+                        ([mintOk, rulesOk, deployResult?.ok, activated].filter(Boolean).length / 4) * 100
                       }%`,
                     }}
                   />
