@@ -320,10 +320,16 @@ export default function Home() {
           <span className="italic bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">anyone</span>{" "}
           with pump.fun creator fees.
         </h1>
-        <p className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed">
-          Route your token&apos;s creator fees into on-chain growth — airdrop holders, buy back and burn, or reward
-          your community. Automatically, non-custodially, from fees you already earn.
-        </p>
+        <div className="mt-6 max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/[0.06] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.7)]">
+          <video
+            src="/banner.webm"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-auto block"
+          />
+        </div>
         <div className="mt-7 flex items-center justify-center gap-3">
           <a href="#create" className="btn-deploy inline-block !py-3 !px-7">⚡ Create a pipeline</a>
           <a href="#pipes" className="btn-secondary inline-block !py-3 !px-6">See live pipes</a>
