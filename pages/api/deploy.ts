@@ -1,31 +1,54 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { encryptKeypair } from "../../lib/crypto";
-import { cronPresetToIntervalMinutes, formatInterval } from "../../lib/schedule";
+import { PublicKey } from "@solana/web3.js";
+import { cronPresetToIntervalMinutes } from "../../lib/schedule";
 import { createPipeline } from "../../lib/pipelineStore";
 import type { SplitRule } from "../../lib/pipelineStore";
+import { generatePipelineWallet } from "../../lib/walletGen";
 
 /* ── POST /api/deploy ────────────────────────────────────────────────
-   One call: encrypts the keypair, stores the ATA growth job in Supabase,
-   done. Nothing else for the visitor to do — Vercel Cron picks it up
-   and runs it automatically from here on. */
+   Fee-sharing model: the panel GENERATES a fresh operations wallet, stores
+   the pipeline DISABLED, and returns the wallet's public key. The creator
+   then sets that wallet as their token's sole fee receiver on Pump.fun and
+   calls /api/activate, which verifies entitlement on-chain before enabling.
+   No creator private key ever touches the app. */
 
-// Canonical wrapped-SOL mint — when collecting Pump.fun creator rewards, the source is SOL.
+// Canonical wrapped-SOL mint — creator-fee collection settles as SOL.
 const WSOL_MINT = "So11111111111111111111111111111111111111112";
+
+function isValidPubkey(s: string): boolean {
+  try {
+    // eslint-disable-next-line no-new
+    new PublicKey(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
-  const { sourceMint, sourceWallet, rules, cron, keypair, ownerAddress, claimCreatorFees, dropThresholdSol } = req.body;
-  const claiming = !!claimCreatorFees;
-  // When collecting creator fees, the source is always collected SOL (wSOL) — no source-token mint needed.
-  const effectiveSourceMint = claiming ? WSOL_MINT : (sourceMint || "").trim();
+  const { feeMint, rules, cron, ownerAddress, dropThresholdSol } = req.body;
 
-  if (!effectiveSourceMint) return res.status(400).json({ error: "sourceMint required" });
+  const mint = (feeMint || "").trim();
+  if (!mint) return res.status(400).json({ error: "feeMint required — the token whose creator fees this pipeline collects" });
+  if (!isValidPubkey(mint)) return res.status(400).json({ error: "feeMint is not a valid Solana address" });
   if (!Array.isArray(rules) || !rules.length) return res.status(400).json({ error: "rules required" });
-  if (!keypair?.trim()) return res.status(400).json({ error: "keypair required — the ATA growth job can't execute without a signing key" });
 
-  // Spendable SOL required before a distribution round fires. Omit/blank to use the platform
-  // default (see lib/moneyGate.ts MIN_SOL_DROP_LAMPORTS).
+  const cleanRules = (rules as SplitRule[])
+    .filter((r) => r.pct > 0)
+    .map((r) => ({
+      type: r.type,
+      pct: r.pct,
+      targetMint: (r.targetMint || "").trim(),
+      targetWallet: (r.targetWallet || "").trim(),
+      holderMint: (r.holderMint || "").trim(),
+    }));
+  if (!cleanRules.length) return res.status(400).json({ error: "at least one rule with pct > 0 is required" });
+  const totalPct = cleanRules.reduce((s, r) => s + r.pct, 0);
+  if (totalPct !== 100) return res.status(400).json({ error: `rules must total 100% (got ${totalPct}%)` });
+
+  // Spendable SOL required before a distribution round fires. Omit/blank to use the platform default.
   let dropThresholdLamports: number | null = null;
   if (dropThresholdSol !== undefined && dropThresholdSol !== null && dropThresholdSol !== "") {
     const parsed = Number(dropThresholdSol);
@@ -38,23 +61,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const intervalMinutes = cronPresetToIntervalMinutes(cron);
 
   try {
-    const encryptedKeypair = encryptKeypair(keypair.trim());
+    const wallet = generatePipelineWallet();
     const pipeline = await createPipeline({
       ownerAddress: ownerAddress || null,
-      sourceMint: effectiveSourceMint,
-      sourceWallet: (sourceWallet || "").trim(),
-      rules: (rules as SplitRule[]).filter((r) => r.pct > 0),
+      sourceMint: WSOL_MINT,
+      sourceWallet: wallet.publicKey, // the generated operations wallet
+      rules: cleanRules,
       intervalMinutes,
-      claimCreatorFees: claiming,
+      claimCreatorFees: true,
+      feeMint: mint,
       dropThresholdLamports,
-      encryptedKeypair,
+      encryptedKeypair: wallet.encryptedKeypair,
+      enabled: false, // stays off until entitlement is verified via /api/activate
     });
 
     return res.json({
       ok: true,
       id: pipeline.id,
+      walletPublicKey: wallet.publicKey,
+      feeMint: mint,
       intervalMinutes,
-      message: `ATA growth job live — checks every ${formatInterval(intervalMinutes)}. Nothing else to do.`,
+      message:
+        `Pipeline created (paused). Set this wallet as your token's fee receiver on Pump.fun, ` +
+        `then activate: ${wallet.publicKey}`,
     });
   } catch (err: any) {
     return res.status(500).json({ ok: false, error: err.message });

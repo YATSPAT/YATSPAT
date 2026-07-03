@@ -22,6 +22,10 @@ export interface PipelineRecord {
   intervalMinutes: number;
   enabled: boolean;
   claimCreatorFees: boolean;
+  // The token mint whose Pump.fun creator fees this pipeline collects (via the
+  // fee-sharing distribute crank). The pipeline's own wallet must be the mint's
+  // sole fee receiver. null on legacy rows that predate fee sharing.
+  feeMint: string | null;
   // Spendable SOL (after the fee-float reserve) required before a distribution round fires.
   // null means "use the platform default" (see moneyGate.ts MIN_SOL_DROP_LAMPORTS).
   dropThresholdLamports: number | null;
@@ -45,6 +49,7 @@ interface PipelineRow {
   interval_minutes: number;
   enabled: boolean;
   claim_creator_fees: boolean;
+  fee_mint: string | null;
   drop_threshold_lamports: number | null;
   encrypted_keypair: EncryptedKeypair;
   last_run_at: string | null;
@@ -65,6 +70,7 @@ function fromRow(row: PipelineRow): PipelineRecord {
     intervalMinutes: row.interval_minutes,
     enabled: row.enabled,
     claimCreatorFees: row.claim_creator_fees,
+    feeMint: row.fee_mint,
     dropThresholdLamports: row.drop_threshold_lamports,
     encryptedKeypair: row.encrypted_keypair,
     lastRunAt: row.last_run_at,
@@ -81,8 +87,10 @@ export async function createPipeline(input: {
   rules: SplitRule[];
   intervalMinutes: number;
   claimCreatorFees: boolean;
+  feeMint?: string | null;
   dropThresholdLamports?: number | null;
   encryptedKeypair: EncryptedKeypair;
+  enabled?: boolean;
 }): Promise<PipelineRecord> {
   const { data, error } = await getSupabase()
     .from("pipelines")
@@ -93,8 +101,9 @@ export async function createPipeline(input: {
       network: "mainnet",
       rules: input.rules,
       interval_minutes: input.intervalMinutes,
-      enabled: true,
+      enabled: input.enabled ?? true,
       claim_creator_fees: input.claimCreatorFees,
+      fee_mint: input.feeMint ?? null,
       drop_threshold_lamports: input.dropThresholdLamports ?? null,
       encrypted_keypair: input.encryptedKeypair,
     })
@@ -118,6 +127,17 @@ export async function listEnabledPipelines(): Promise<PipelineRecord[]> {
   const { data, error } = await getSupabase().from("pipelines").select("*").eq("enabled", true);
   if (error) throw new Error(`Failed to list pipelines: ${error.message}`);
   return (data as PipelineRow[]).map(fromRow);
+}
+
+export async function getPipeline(id: string): Promise<PipelineRecord | null> {
+  const { data, error } = await getSupabase().from("pipelines").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Failed to fetch pipeline ${id}: ${error.message}`);
+  return data ? fromRow(data as PipelineRow) : null;
+}
+
+export async function setPipelineEnabled(id: string, enabled: boolean): Promise<void> {
+  const { error } = await getSupabase().from("pipelines").update({ enabled }).eq("id", id);
+  if (error) throw new Error(`Failed to set enabled=${enabled} for pipeline ${id}: ${error.message}`);
 }
 
 export async function claimDuePipelineRun(record: PipelineRecord, now: number): Promise<boolean> {

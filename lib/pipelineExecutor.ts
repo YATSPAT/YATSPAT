@@ -19,7 +19,7 @@ import {
 } from "@solana/spl-token";
 import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
-import { claimCreatorFees } from "./pumpClaim";
+import { collectSharedCreatorFees } from "./feeCollect";
 import { computePlatformFee, PLATFORM_FEE_WALLET, PLATFORM_FEE_BPS, MIN_FEE_LAMPORTS } from "./platformFee";
 import { allocateEqualRawAmounts, planLotteryDistribution, MAX_LOTTERY_RECIPIENTS, MISSING_ATA_RECIPIENT_COST_LAMPORTS } from "./lotteryDistribution";
 import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
@@ -557,15 +557,26 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     const isSol = record.sourceMint === WSOL_MINT;
     let claimedLamports = 0;
 
-    // Step 0: collect Pump.fun creator fees when enabled. SOL-mode then checks whether the wallet
-    // has reached the money threshold before spending anything downstream.
+    // Step 0: collect this pipeline's Pump.fun creator-fee share via the fee-sharing
+    // distribute crank (permissionless — our wallet is the token's sole fee receiver).
+    // SOL-mode then checks whether the wallet has reached the money threshold before
+    // spending anything downstream.
     if (record.claimCreatorFees) {
-      const claim = await claimCreatorFees(connection, keypair);
-      claimedLamports = claim.claimedLamports ?? 0;
-      if (claim.claimed) results.push({ type: "claim", pct: 0, txid: claim.txid, claimedLamports });
-      else if (claim.error) {
-        results.push({ type: "claim", pct: 0, skipped: true, error: claim.error });
-        if (isSol) return { ok: false, results, error: `creator fee claim failed: ${claim.error}` };
+      if (!record.feeMint) {
+        results.push({ type: "claim", pct: 0, skipped: true, error: "no fee_mint set for this pipeline" });
+        if (isSol) return { ok: false, results, error: "creator fee collection failed: pipeline has no fee_mint configured" };
+      } else {
+        const claim = await collectSharedCreatorFees(connection, keypair, new PublicKey(record.feeMint));
+        claimedLamports = claim.collectedLamports ?? 0;
+        if (claim.collected) results.push({ type: "claim", pct: 0, txid: claim.txid, claimedLamports });
+        else if (claim.error) {
+          results.push({ type: "claim", pct: 0, skipped: true, error: claim.error });
+          if (isSol) return { ok: false, results, error: `creator fee collection failed: ${claim.error}` };
+        } else {
+          // Nothing to distribute yet (below minimum) — not an error; keep going so the
+          // threshold/no-op path reports a clear reason.
+          results.push({ type: "claim", pct: 0, skipped: true, note: claim.note });
+        }
       }
     }
 

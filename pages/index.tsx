@@ -16,9 +16,7 @@ interface DraftRule {
 }
 
 interface Draft {
-  claimCreatorFees?: boolean;
-  sourceMint?: string;
-  sourceWallet?: string;
+  feeMint?: string;
   rules?: DraftRule[];
   intervalMinutes?: number;
   dropThresholdSol?: number;
@@ -38,7 +36,7 @@ const RULE_LABEL: Record<RuleType, string> = {
 };
 
 const GREETING =
-  "Hi! I'll set up your ATA growth pipeline — it collects Pump.fun creator rewards as SOL and uses them to grow your token's holder count automatically. Are you collecting Pump.fun creator rewards, or is the SOL/token source something else?";
+  "Hi! I'll set up your ATA growth pipeline. It collects your Pump.fun token's creator fees and uses them to grow your holder count automatically — the panel generates a wallet you'll set as your token's fee receiver, so you never share a private key. To start: what's your token's mint address?";
 
 function Logo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -93,9 +91,10 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
-  const [keypair, setKeypair] = useState("");
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const [activating, setActivating] = useState(false);
+  const [activateResult, setActivateResult] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -103,11 +102,10 @@ export default function Home() {
   }, [turns, sending]);
 
   const rulesOk = (draft.rules?.length || 0) > 0 && rulesTotal(draft.rules) === 100;
-  const sourceOk = draft.claimCreatorFees === true || (draft.claimCreatorFees === false && !!draft.sourceMint?.trim());
-  const walletOk = !!(draft.sourceWallet?.trim() || (connected && publicKey));
-  const keypairOk = !!keypair.trim();
-  const configComplete = sourceOk && rulesOk && walletOk;
-  const canDeploy = configComplete && keypairOk && draft.readyToDeploy === true;
+  const mintOk = !!draft.feeMint?.trim();
+  const configComplete = mintOk && rulesOk;
+  const canDeploy = configComplete && draft.readyToDeploy === true;
+  const activated = activateResult?.activated === true;
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || sending) return;
@@ -138,17 +136,13 @@ export default function Home() {
   };
 
   const deploy = async () => {
-    const wallet = draft.sourceWallet?.trim() || publicKey?.toBase58() || "";
     setDeploying(true);
-
     try {
       const res = await fetch("/api/deploy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sourceMint: draft.sourceMint?.trim() || "",
-          sourceWallet: wallet,
-          claimCreatorFees: draft.claimCreatorFees === true,
+          feeMint: draft.feeMint?.trim() || "",
           rules: (draft.rules || []).filter((r) => r.pct > 0).map((r) => ({
             type: r.type,
             pct: r.pct,
@@ -158,7 +152,6 @@ export default function Home() {
           })),
           cron: draft.intervalMinutes || 60,
           dropThresholdSol: draft.dropThresholdSol ?? undefined,
-          keypair: keypair.trim(),
           ownerAddress: signedIn ? publicKey?.toBase58() : undefined,
         }),
       });
@@ -171,11 +164,29 @@ export default function Home() {
     }
   };
 
+  const activate = async () => {
+    if (!deployResult?.id) return;
+    setActivating(true);
+    try {
+      const res = await fetch("/api/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deployResult.id }),
+      });
+      const data = await res.json();
+      setActivateResult(data);
+    } catch (err: any) {
+      setActivateResult({ ok: false, error: err.message });
+    } finally {
+      setActivating(false);
+    }
+  };
+
   const resetAll = () => {
     setTurns([{ role: "assistant", content: GREETING }]);
     setDraft({});
-    setKeypair("");
     setDeployResult(null);
+    setActivateResult(null);
   };
 
   return (
@@ -242,18 +253,6 @@ export default function Home() {
                 </div>
 
                 <div className="p-4 border-t border-slate-700/40 space-y-3">
-                  {configComplete && !draft.readyToDeploy && (
-                    <div>
-                      <label className="text-xs text-slate-400 mb-1.5 block">Operations wallet keypair (required to deploy — never sent to chat)</label>
-                      <input
-                        type="password"
-                        className="glass-input font-mono text-sm"
-                        value={keypair}
-                        onChange={(e) => setKeypair(e.target.value)}
-                        placeholder="Paste private key (base58)"
-                      />
-                    </div>
-                  )}
                   <form
                     className="flex gap-2"
                     onSubmit={(e) => {
@@ -265,7 +264,7 @@ export default function Home() {
                       className="glass-input text-sm flex-1"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={connected && !draft.sourceWallet ? `e.g. "yes, use ${publicKey?.toBase58().slice(0, 6)}…"` : "Type your answer…"}
+                      placeholder="Type your answer…"
                       disabled={sending}
                     />
                     <button className="btn-primary shrink-0" type="submit" disabled={sending || !input.trim()}>
@@ -274,34 +273,70 @@ export default function Home() {
                   </form>
                   {canDeploy && (
                     <button className="btn-deploy w-full" onClick={deploy} disabled={deploying}>
-                      {deploying ? "Deploying…" : "⚡ Deploy ATA Growth Job"}
+                      {deploying ? "Creating…" : "⚡ Create Pipeline"}
                     </button>
                   )}
                   {deployResult && !deployResult.ok && (
                     <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
-                      {deployResult.error || "Deploy failed"}
+                      {deployResult.error || "Create failed"}
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {deployResult?.ok && (
+            {deployResult?.ok && !activated && (
+              <div className="glass-card p-8 space-y-5">
+                <div className="text-center">
+                  <div className="text-5xl mb-2">🔑</div>
+                  <h2 className="text-2xl font-bold text-white">One step left: set your fee receiver</h2>
+                </div>
+                <p className="text-slate-300 text-sm text-center">
+                  The panel generated a dedicated wallet for this pipeline. On Pump.fun, set it as your token&apos;s
+                  <span className="text-white font-semibold"> fee receiver</span>, then activate below.
+                </p>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1.5 block">Your pipeline wallet (set this as the fee receiver)</label>
+                  <div className="flex gap-2">
+                    <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
+                    <button
+                      className="btn-secondary shrink-0 text-xs"
+                      onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
+                  <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
+                  <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(draft.intervalMinutes || 60)}</span></div>
+                  <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
+                </div>
+                <button className="btn-deploy w-full" onClick={activate} disabled={activating}>
+                  {activating ? "Verifying on-chain…" : "✓ I've set it — Activate"}
+                </button>
+                {activateResult && !activateResult.activated && (
+                  <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-300 text-xs">
+                    {activateResult.error
+                      ? activateResult.error
+                      : activateResult.entitlement?.reason || "This wallet isn't the token's fee receiver yet. Set it on Pump.fun, then try again."}
+                  </div>
+                )}
+                <button className="btn-secondary w-full" onClick={resetAll}>← Start New</button>
+              </div>
+            )}
+
+            {activated && (
               <div className="glass-card p-8 text-center space-y-5">
                 <div className="text-5xl">✅</div>
-                <h2 className="text-2xl font-bold text-white">ATA Growth Job Live</h2>
+                <h2 className="text-2xl font-bold text-white">Pipeline Live</h2>
                 <p className="text-slate-300 text-sm">
                   {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → check every {formatInterval(draft.intervalMinutes || 60)}
                 </p>
-                {deployResult.message && (
-                  <div className="p-3 rounded-xl text-sm bg-emerald-500/5 border border-emerald-500/20 text-emerald-300">
-                    {deployResult.message}
-                  </div>
-                )}
                 <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
                   <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
-                  <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(draft.intervalMinutes || 60)}</span></div>
-                  <p className="text-[10px] text-emerald-400 pt-1">It will collect, wait for the SOL threshold, then increase ATA holder count automatically.</p>
+                  <div className="flex justify-between"><span>Your share</span><span className="text-emerald-300 font-mono">{((activateResult?.entitlement?.shareBps ?? 0) / 100).toFixed(2)}%</span></div>
+                  <p className="text-[10px] text-emerald-400 pt-1">It will collect creator fees, wait for the SOL threshold, then increase ATA holder count automatically.</p>
                 </div>
                 <button className="btn-secondary" onClick={resetAll}>← Start New</button>
               </div>
@@ -315,30 +350,22 @@ export default function Home() {
 
               <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Funding source</span>
-                  <span className={sourceOk ? "text-emerald-400" : "text-amber-400"}>
-                    {draft.claimCreatorFees === true
-                      ? "Creator rewards (SOL)"
-                      : draft.claimCreatorFees === false
-                      ? draft.sourceMint
-                        ? `${draft.sourceMint.slice(0, 6)}…`
-                        : "Pending mint"
-                      : "Not set"}
+                  <span className="text-slate-400">Token</span>
+                  <span className={mintOk ? "text-emerald-400" : "text-amber-400"}>
+                    {draft.feeMint ? `${draft.feeMint.slice(0, 6)}…` : "Not set"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Wallet</span>
-                  <span className={walletOk ? "text-emerald-400" : "text-amber-400"}>
-                    {draft.sourceWallet
-                      ? `${draft.sourceWallet.slice(0, 6)}…`
-                      : connected
-                      ? "Use connected"
-                      : "Not set"}
+                  <span className="text-slate-400">Pipeline wallet</span>
+                  <span className={deployResult?.walletPublicKey ? "text-emerald-400" : "text-slate-500"}>
+                    {deployResult?.walletPublicKey ? `${deployResult.walletPublicKey.slice(0, 6)}…` : "Generated on create"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Keypair</span>
-                  <span className={keypairOk ? "text-emerald-400" : "text-amber-400"}>{keypairOk ? "Provided" : "Required"}</span>
+                  <span className="text-slate-400">Activation</span>
+                  <span className={activated ? "text-emerald-400" : "text-amber-400"}>
+                    {activated ? "Live" : deployResult?.ok ? "Awaiting fee receiver" : "Pending"}
+                  </span>
                 </div>
 
                 <div className="pt-2 border-t border-slate-700/40">
@@ -369,15 +396,15 @@ export default function Home() {
 
               <div className="mt-4 pt-3 border-t border-slate-700/40">
                 <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1.5">
-                  <span>Ready to deploy:</span>
-                  <span className={canDeploy ? "text-emerald-400" : "text-amber-400"}>{canDeploy ? "Yes" : "Not yet"}</span>
+                  <span>Progress:</span>
+                  <span className={activated ? "text-emerald-400" : "text-amber-400"}>{activated ? "Live" : canDeploy ? "Ready to create" : "Configuring"}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 transition-all"
                     style={{
                       width: `${
-                        ([sourceOk, rulesOk, walletOk, keypairOk, draft.readyToDeploy === true].filter(Boolean).length / 5) * 100
+                        ([mintOk, rulesOk, draft.readyToDeploy === true, deployResult?.ok, activated].filter(Boolean).length / 5) * 100
                       }%`,
                     }}
                   />

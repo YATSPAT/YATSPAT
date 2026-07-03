@@ -15,6 +15,7 @@ function record(overrides: Partial<PipelineRecord>): PipelineRecord {
     intervalMinutes: 5,
     enabled: true,
     claimCreatorFees: false,
+    feeMint: null,
     dropThresholdLamports: null,
     encryptedKeypair: { ciphertext: "", iv: "", authTag: "" },
     lastRunAt: "2026-07-02T00:00:00.000Z",
