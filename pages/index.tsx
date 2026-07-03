@@ -54,6 +54,42 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
   );
 }
 
+/* Pump.fun pill icon */
+function PumpIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+      <g transform="rotate(45 50 50)">
+        <rect x="30" y="10" width="40" height="80" rx="20" fill="#ffffff" />
+        <path d="M30 50 H70 V70 A20 20 0 0 1 50 90 A20 20 0 0 1 30 70 Z" fill="#4fd18a" />
+        <rect x="30" y="10" width="40" height="80" rx="20" fill="none" stroke="#14432f" strokeWidth="7" />
+        <line x1="30" y1="50" x2="70" y2="50" stroke="#14432f" strokeWidth="7" />
+        <path d="M40 71 a9 9 0 0 0 2 8" stroke="#ffffff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+        <circle cx="45" cy="83" r="2" fill="#ffffff" />
+      </g>
+    </svg>
+  );
+}
+
+/* Explorer "Q" icon — teal ring + purple core */
+function ScanIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} xmlns="http://www.w3.org/2000/svg">
+      <circle
+        cx="50"
+        cy="50"
+        r="34"
+        fill="none"
+        stroke="#25e6b8"
+        strokeWidth="14"
+        strokeLinecap="round"
+        strokeDasharray="176 44"
+        transform="rotate(58 50 50)"
+      />
+      <circle cx="50" cy="50" r="18" fill="#b44ce0" />
+    </svg>
+  );
+}
+
 function CircuitBackground() {
   return (
     <svg
@@ -247,11 +283,11 @@ export default function Home() {
               <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
                 𝕏
               </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-xl bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-sm hover:bg-fuchsia-500/25 transition-colors">
-                💊
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
+                <PumpIcon className="w-5 h-5" />
               </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Solscan" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
-                🔎
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
+                <ScanIcon className="w-5 h-5" />
               </a>
             </div>
             <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #22d3ee)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
