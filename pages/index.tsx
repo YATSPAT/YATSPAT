@@ -198,7 +198,7 @@ export default function Home() {
           <div className="flex items-center gap-3 min-w-0">
             <Logo className="w-10 h-10 shrink-0" />
             <div className="min-w-0">
-              <h1 className="text-lg font-bold text-white tracking-tight">Wen Stimmy?</h1>
+              <span className="block text-lg font-bold text-white tracking-tight">Wen Stimmy?</span>
               <p className="text-xs text-slate-300 flex items-center gap-2">
                 <span className="hidden sm:inline">ATA Holder Growth Panel</span>
                 <span className="px-1.5 py-px rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] uppercase tracking-wider">MAINNET</span>
@@ -220,10 +220,58 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative max-w-6xl mx-auto pt-32 pb-16 px-4">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-8 max-w-xl">
-          Increase Token Account Holders
-        </h2>
+      {/* Hero */}
+      <section className="relative max-w-6xl mx-auto pt-32 pb-10 px-4 text-center">
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-400/30 text-fuchsia-200 text-xs font-medium tracking-wide">
+          <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" />
+          Automated Pump.fun fee routing
+        </span>
+        <h1 className="mt-6 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.05]">
+          Turn creator fees into
+          <br className="hidden sm:block" />{" "}
+          <span className="bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">
+            real holders.
+          </span>
+        </h1>
+        <p className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed">
+          Wen Stimmy auto-collects your token&apos;s Pump.fun creator fees and routes them straight back
+          into your chart — growing your on-chain holder count on autopilot. No private keys, no manual claims.
+        </p>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-xs">
+          {["🔒 Non-custodial", "⚡ Permissionless collection", "🎯 Set-and-forget"].map((chip) => (
+            <span key={chip} className="px-3 py-1.5 rounded-full bg-surface-800/70 border border-slate-700/50 text-slate-300">
+              {chip}
+            </span>
+          ))}
+        </div>
+        <a href="#builder" className="mt-8 inline-flex items-center gap-2 text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
+          Build your pipeline below <span className="animate-bounce">↓</span>
+        </a>
+      </section>
+
+      {/* How it works */}
+      <section className="relative max-w-5xl mx-auto pb-14 px-4">
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            { n: "1", icon: "🤖", title: "Describe it", body: "Tell the assistant your token and how to route its fees — 100% to holders, or your own split." },
+            { n: "2", icon: "🔑", title: "Set fee receiver", body: "Point your token's Pump.fun creator fees at the wallet the panel generates. You never share a key." },
+            { n: "3", icon: "📈", title: "Auto-grow", body: "It collects fees every cycle and grows your holder count automatically. Nothing else to do." },
+          ].map((s) => (
+            <div key={s.n} className="glass-card p-5 text-left relative overflow-hidden">
+              <div className="absolute -top-3 -right-2 text-7xl font-black text-white/[0.04] select-none">{s.n}</div>
+              <div className="text-2xl mb-2">{s.icon}</div>
+              <h3 className="text-white font-semibold mb-1">{s.title}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="builder" className="relative max-w-6xl mx-auto pb-16 px-4 scroll-mt-28">
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-2xl font-bold text-white tracking-tight">Build your pipeline</h2>
+          <span className="h-px flex-1 bg-gradient-to-r from-slate-600/50 to-transparent" />
+        </div>
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="space-y-4">
@@ -417,6 +465,24 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <footer className="relative border-t border-slate-800/60 mt-8">
+        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <Logo className="w-7 h-7" />
+            <span className="text-sm text-slate-400">
+              <span className="text-slate-200 font-semibold">Wen Stimmy</span> · Automated holder growth
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Mainnet
+            </span>
+            <span>Non-custodial</span>
+            <span>Powered by Pump.fun fee sharing</span>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
