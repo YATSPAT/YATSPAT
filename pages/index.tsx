@@ -227,15 +227,16 @@ export default function Home() {
           Automated Pump.fun fee routing
         </span>
         <h1 className="mt-6 text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.05]">
-          Turn creator fees into
-          <br className="hidden sm:block" />{" "}
-          <span className="bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">
-            real holders.
+          Airdrop{" "}
+          <span className="italic bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">
+            anyone
           </span>
+          <br className="hidden sm:block" />{" "}
+          with Pump.fun creator fees
         </h1>
         <p className="mt-5 max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed">
-          Wen Stimmy auto-collects your token&apos;s Pump.fun creator fees and routes them straight back
-          into your chart — growing your on-chain holder count on autopilot. No private keys, no manual claims.
+          Wen Stimmy stimulates your token&apos;s economy in three ways — automatically, from the creator
+          fees you&apos;re already earning. No private keys, no manual claims.
         </p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-xs">
           {["🔒 Non-custodial", "⚡ Permissionless collection", "🎯 Set-and-forget"].map((chip) => (
@@ -249,13 +250,28 @@ export default function Home() {
         </a>
       </section>
 
-      {/* How it works */}
+      {/* Three ways it stimulates your economy */}
       <section className="relative max-w-5xl mx-auto pb-14 px-4">
         <div className="grid sm:grid-cols-3 gap-4">
           {[
-            { n: "1", icon: "🤖", title: "Describe it", body: "Tell the assistant your token and how to route its fees — 100% to holders, or your own split." },
-            { n: "2", icon: "🔑", title: "Set fee receiver", body: "Point your token's Pump.fun creator fees at the wallet the panel generates. You never share a key." },
-            { n: "3", icon: "📈", title: "Auto-grow", body: "It collects fees every cycle and grows your holder count automatically. Nothing else to do." },
+            {
+              n: "1",
+              icon: "📣",
+              title: "Exposure",
+              body: "Airdrop your coin to holders of any other token — get in front of up to 245 accounts for as little as 0.5 SOL.",
+            },
+            {
+              n: "2",
+              icon: "🔥",
+              title: "Deflation",
+              body: "Buy back and burn — the classic Pump.fun didn't want you to have. Swap fees back into your coin and burn them forever. Less supply, more value.",
+            },
+            {
+              n: "3",
+              icon: "🎁",
+              title: "Rewards",
+              body: "Reward your own holders — route fees straight back to the wallets already holding your coin. Loyalty that pays.",
+            },
           ].map((s) => (
             <div key={s.n} className="glass-card p-5 text-left relative overflow-hidden">
               <div className="absolute -top-3 -right-2 text-7xl font-black text-white/[0.04] select-none">{s.n}</div>
