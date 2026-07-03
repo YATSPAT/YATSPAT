@@ -57,7 +57,7 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
 function CircuitBackground() {
   return (
     <svg
-      className="pointer-events-none fixed inset-0 -z-10 h-full w-full opacity-[0.5]"
+      className="pointer-events-none fixed inset-0 -z-10 h-full w-full opacity-[0.18]"
       xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMaxYMid slice"
     >
@@ -83,12 +83,12 @@ function rulesTotal(rules?: DraftRule[]): number {
   return (rules || []).reduce((s, r) => s + (r.pct || 0), 0);
 }
 
-// ── Our token. Fill in the real values (mint + socials) to populate the sidebar. ──
+// ── Our token. ──
 const STIMMY = {
   ticker: "$STIMMY",
-  mint: "", // TODO: the $STIMMY mint address
-  x: "", // TODO: https://x.com/...
-  telegram: "", // TODO: https://t.me/...
+  mint: "6VVfQ7Y3qBEDi4ybx3QwzPYvjp93qWkcEdHbf1SXpump",
+  x: "https://x.com/wenstimmyfun",
+  telegram: "",
   blurb:
     "The token behind the panel. Wen Stimmy runs its own Pump.fun creator fees through this exact tool — the airdrop machine eating its own cooking.",
 };
