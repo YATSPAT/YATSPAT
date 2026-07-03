@@ -596,10 +596,13 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       }
     }
 
-    if (isSol && !shouldDropWalletSol(sourceBalance, MIN_SOL_DROP_LAMPORTS)) {
+    // Per-pipeline override, falling back to the platform default (moneyGate.ts).
+    const dropThresholdLamports = record.dropThresholdLamports ?? MIN_SOL_DROP_LAMPORTS;
+
+    if (isSol && !shouldDropWalletSol(sourceBalance, dropThresholdLamports)) {
       const summary = lamports <= SOL_RESERVE_LAMPORTS
         ? `wallet has ${sol(lamports)} SOL but needs ${sol(SOL_RESERVE_LAMPORTS)} SOL reserve — nothing to spend`
-        : `wallet has ${sol(lamports)} SOL; spendable ${sol(sourceBalance)} SOL is below ${sol(MIN_SOL_DROP_LAMPORTS)} SOL drop threshold`;
+        : `wallet has ${sol(lamports)} SOL; spendable ${sol(sourceBalance)} SOL is below ${sol(dropThresholdLamports)} SOL drop threshold`;
       return { ok: true, results, summary };
     }
 

@@ -8,3 +8,5 @@ node_modules/
 .vercel
 *.tsbuildinfo
 .worktrees/
+.env*
+!.env.example

@@ -1,7 +1,9 @@
 export const EXISTING_ATA_RECIPIENT_COST_LAMPORTS = 20_000;
 export const MISSING_ATA_RECIPIENT_COST_LAMPORTS = 2_120_000;
 export const MIN_SWAP_LAMPORTS = 2_100_000;
-export const MAX_LOTTERY_RECIPIENTS = 300;
+// 245 is the max a 0.5 SOL pool (the default drop threshold) can fund at worst-case
+// per-recipient rent cost — see moneyGate.ts MIN_SOL_DROP_LAMPORTS.
+export const MAX_LOTTERY_RECIPIENTS = 245;
 
 export interface LotteryCandidate {
   address: string;

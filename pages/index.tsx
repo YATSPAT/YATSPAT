@@ -1,125 +1,44 @@
-import { useState, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import LivePipelines from "../components/LivePipelines";
-import { SCHEDULE_PRESETS, formatInterval } from "../lib/schedule";
+import { formatInterval } from "../lib/schedule";
 
-type Step = "source" | "split" | "schedule" | "done";
 type RuleType = "burn" | "buy-burn" | "distribute" | "send";
 
-interface SplitRule {
-  id: string;
+interface DraftRule {
   type: RuleType;
   pct: number;
-  targetMint: string;
-  targetWallet: string;
-  holderMint: string;
+  targetMint?: string;
+  targetWallet?: string;
+  holderMint?: string;
 }
 
-interface HudInfo {
-  crumb: string;
-  title: string;
-  body: string;
-  example?: string;
+interface Draft {
+  claimCreatorFees?: boolean;
+  sourceMint?: string;
+  sourceWallet?: string;
+  rules?: DraftRule[];
+  intervalMinutes?: number;
+  dropThresholdSol?: number;
+  readyToDeploy?: boolean;
 }
 
-const ACTION_LABEL: Record<RuleType, string> = {
+interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+const RULE_LABEL: Record<RuleType, string> = {
   "buy-burn": "Swap → Burn",
   burn: "Burn tokens",
   distribute: "Increase ATA holders",
   send: "Send to wallet",
 };
 
-const STEP_HUD: Record<Step, HudInfo> = {
-  source: {
-    crumb: "Funding Source",
-    title: "Where Growth Funding Comes From",
-    body: "For a Pump.fun coin, leave collection on. Creator rewards accrue as SOL, and the system collects them before running the ATA holder growth job.",
-  },
-  split: {
-    crumb: "Growth Rules",
-    title: "Configure Holder Growth",
-    body: "Use rules to route collected SOL into token-account holder growth or other treasury actions. For ATA growth, recipients are selected from an eligible holder snapshot and receive equal allocations.",
-  },
-  schedule: {
-    crumb: "Schedule",
-    title: "Execution Schedule",
-    body: "How often the system checks for collectible SOL and whether the 0.5 SOL execution threshold has been reached.",
-  },
-  done: {
-    crumb: "Done",
-    title: "Growth Job Status",
-    body: "Deployment status, keypair status, and the next scheduled checks for ATA holder growth.",
-  },
-};
-
-function ruleHud(rule: SplitRule, field: "type" | "pct" | "target", index: number): HudInfo {
-  const crumb = `Growth Rules → Rule ${index + 1} → ${field === "type" ? "Action" : field === "pct" ? "Allocation" : ACTION_LABEL[rule.type]}`;
-  if (field === "pct") {
-    return {
-      crumb,
-      title: "Allocation %",
-      body: `This rule receives ${rule.pct}% of the collected SOL available for this execution. All rules together must total exactly 100%.`,
-    };
-  }
-  if (field === "type") {
-    return {
-      crumb,
-      title: "Rule Action",
-      body: `Currently set to "${ACTION_LABEL[rule.type]}". Choose how this share of collected SOL is handled.`,
-    };
-  }
-  if (rule.type === "buy-burn") {
-    return {
-      crumb,
-      title: "Swap Into (then burn)",
-      body: "This field specifies the SPL token mint address that the source token will be swapped into before being burned. The burning mechanism permanently removes tokens from circulation.",
-      example: "e.g. USDC, SOL, or another SPL token mint address.",
-    };
-  }
-  if (rule.type === "distribute") {
-    return {
-      crumb,
-      title: "Eligible Holder Snapshot",
-      body: "The system snapshots holders of this mint, randomly selects as many eligible wallets as the SOL budget can support, and sends equal token allocations. Balances qualify wallets for the snapshot; they do not increase payout size.",
-      example: "e.g. the community token whose holders should be eligible for ATA growth.",
-    };
-  }
-  if (rule.type === "send") {
-    return {
-      crumb,
-      title: "Destination Wallet",
-      body: "A fixed wallet address that receives this rule's share of collected SOL or tokens every cycle.",
-    };
-  }
-  return STEP_HUD.split;
-}
-
-const FIELD_HUD: Record<string, HudInfo> = {
-  "source.claim": {
-    crumb: "Funding Source → Creator Rewards",
-    title: "Collect Creator Rewards",
-    body: "Pump.fun creator rewards accrue on the protocol side and are paid in SOL. With this on, the system collects them before checking whether there is enough spendable SOL for the next ATA holder growth event.",
-    example: "Off: use an SPL token this wallet already holds as the source instead.",
-  },
-  "source.wallet": {
-    crumb: "Funding Source → Creator Wallet",
-    title: "Creator Wallet Address",
-    body: "The wallet whose collectible SOL funds ATA holder growth. Auto-fills from your connected wallet.",
-  },
-  "source.keypair": {
-    crumb: "Funding Source → Creator Keypair",
-    title: "Auto-Execution Keypair",
-    body: "Encrypted (AES-256-GCM) before storage and decrypted only in memory at execution time. Use a dedicated operations wallet funded only for this job.",
-  },
-  "schedule.cron": {
-    crumb: "Schedule → Interval",
-    title: "Execution Schedule",
-    body: "How often the system checks for collectible SOL and the 0.5 SOL holder-growth threshold.",
-    example: "Presets range from every 5 minutes to daily.",
-  },
-};
+const GREETING =
+  "Hi! I'll set up your ATA growth pipeline — it collects Pump.fun creator rewards as SOL and uses them to grow your token's holder count automatically. Are you collecting Pump.fun creator rewards, or is the SOL/token source something else?";
 
 function Logo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -133,19 +52,6 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
       </defs>
       <rect width="40" height="40" rx="11" fill="url(#reflector-logo-grad)" opacity="0.18" />
       <path d="M13 9h9.5a6.5 6.5 0 0 1 3 12.3L31 31h-5.4l-4.7-8.7H17V31h-4V9Zm4 3.4v6.4h5.3a3.2 3.2 0 0 0 0-6.4H17Z" fill="url(#reflector-logo-grad)" />
-    </svg>
-  );
-}
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      className={`w-5 h-5 shrink-0 text-slate-300 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -175,50 +81,64 @@ function CircuitBackground() {
   );
 }
 
+function rulesTotal(rules?: DraftRule[]): number {
+  return (rules || []).reduce((s, r) => s + (r.pct || 0), 0);
+}
+
 export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut } = useSiws();
 
-  const [step, setStep] = useState<Step>("source");
-  const [manualOpen, setManualOpen] = useState<Set<Step>>(new Set());
-  const [hud, setHud] = useState<HudInfo>(STEP_HUD.source);
-
-  const [claimCreatorFees, setClaimCreatorFees] = useState(true);
-  const [sourceMint, setSourceMint] = useState("");
-  const [sourceWallet, setSourceWallet] = useState("");
-  const [creatorKeypair, setCreatorKeypair] = useState("");
-  const [intervalMinutes, setIntervalMinutes] = useState(60);
+  const [turns, setTurns] = useState<ChatTurn[]>([{ role: "assistant", content: GREETING }]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [draft, setDraft] = useState<Draft>({});
+  const [keypair, setKeypair] = useState("");
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const [rules, setRules] = useState<SplitRule[]>([
-    { id: "1", type: "distribute", pct: 100, targetMint: "", targetWallet: "", holderMint: "" },
-  ]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [turns, sending]);
 
-  const totalPct = useMemo(() => rules.reduce((s, r) => s + r.pct, 0), [rules]);
-  const addRule = () => setRules([...rules, { id: String(Date.now()), type: claimCreatorFees ? "buy-burn" : "burn", pct: 0, targetMint: "", targetWallet: "", holderMint: "" }]);
-  const removeRule = (id: string) => setRules(rules.filter((r) => r.id !== id));
-  const updateRule = (id: string, p: Partial<SplitRule>) => setRules(rules.map((r) => (r.id === id ? { ...r, ...p } : r)));
+  const rulesOk = (draft.rules?.length || 0) > 0 && rulesTotal(draft.rules) === 100;
+  const sourceOk = draft.claimCreatorFees === true || (draft.claimCreatorFees === false && !!draft.sourceMint?.trim());
+  const walletOk = !!(draft.sourceWallet?.trim() || (connected && publicKey));
+  const keypairOk = !!keypair.trim();
+  const configComplete = sourceOk && rulesOk && walletOk;
+  const canDeploy = configComplete && keypairOk && draft.readyToDeploy === true;
 
-  const STEP_ORDER: Step[] = ["source", "split", "schedule"];
-  const isOpen = (s: Step) => s === step || manualOpen.has(s);
-  const canReach = (s: Step) => STEP_ORDER.indexOf(s) <= STEP_ORDER.indexOf(step);
-  const toggleStep = (s: Step) => {
-    if (s === step || !canReach(s)) return;
-    setManualOpen((prev) => {
-      const next = new Set(prev);
-      next.has(s) ? next.delete(s) : next.add(s);
-      return next;
-    });
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || sending) return;
+    const nextTurns: ChatTurn[] = [...turns, { role: "user", content: text.trim() }];
+    setTurns(nextTurns);
+    setInput("");
+    setSending(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextTurns.map((t) => ({ role: t.role, content: t.content })),
+          draft,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "chat request failed");
+
+      setDraft((prev) => ({ ...prev, ...data.draftPatch }));
+      setTurns((prev) => [...prev, { role: "assistant", content: data.reply }]);
+    } catch (err: any) {
+      setTurns((prev) => [...prev, { role: "assistant", content: `⚠️ ${err.message} — try again.` }]);
+    } finally {
+      setSending(false);
+    }
   };
-  const goToStep = (s: Step) => {
-    setStep(s);
-    setHud(STEP_HUD[s]);
-  };
 
-  /* ── Deploy: one call. Stored server-side (encrypted), runs on schedule forever — nothing else to do. ── */
   const deploy = async () => {
-    const wallet = sourceWallet.trim() || publicKey?.toBase58() || "";
+    const wallet = draft.sourceWallet?.trim() || publicKey?.toBase58() || "";
     setDeploying(true);
 
     try {
@@ -226,61 +146,36 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sourceMint: sourceMint.trim(),
+          sourceMint: draft.sourceMint?.trim() || "",
           sourceWallet: wallet,
-          claimCreatorFees,
-          rules: rules.filter(r => r.pct > 0).map(r => ({
-            type: r.type, pct: r.pct,
-            targetMint: r.targetMint.trim(),
-            targetWallet: r.targetWallet.trim(),
-            holderMint: r.holderMint.trim(),
+          claimCreatorFees: draft.claimCreatorFees === true,
+          rules: (draft.rules || []).filter((r) => r.pct > 0).map((r) => ({
+            type: r.type,
+            pct: r.pct,
+            targetMint: (r.targetMint || "").trim(),
+            targetWallet: (r.targetWallet || "").trim(),
+            holderMint: (r.holderMint || "").trim(),
           })),
-          cron: intervalMinutes,
-          keypair: creatorKeypair.trim() || undefined,
+          cron: draft.intervalMinutes || 60,
+          dropThresholdSol: draft.dropThresholdSol ?? undefined,
+          keypair: keypair.trim(),
           ownerAddress: signedIn ? publicKey?.toBase58() : undefined,
         }),
       });
       const data = await res.json();
-
-      setSourceWallet(wallet);
       setDeployResult(data);
-      goToStep("done");
     } catch (err: any) {
       setDeployResult({ ok: false, error: err.message });
-      goToStep("done");
     } finally {
       setDeploying(false);
     }
   };
 
   const resetAll = () => {
-    goToStep("source");
-    setManualOpen(new Set());
-    setClaimCreatorFees(true);
-    setSourceMint("");
-    setSourceWallet("");
-    setCreatorKeypair("");
-    setRules([
-      { id: "1", type: "distribute", pct: 100, targetMint: "", targetWallet: "", holderMint: "" },
-    ]);
-    setIntervalMinutes(60);
+    setTurns([{ role: "assistant", content: GREETING }]);
+    setDraft({});
+    setKeypair("");
     setDeployResult(null);
-  };
-
-  const badgeClasses = (s: Step) => {
-    const order: Step[] = ["source", "split", "schedule"];
-    if (step === s) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-fuchsia-500/20 text-fuchsia-300 ring-1 ring-fuchsia-400/40";
-    if (order.indexOf(step) > order.indexOf(s)) return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-cyan-500/20 text-cyan-300";
-    return "w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 bg-surface-800 text-slate-600";
-  };
-  const badgeText = (s: Step) => {
-    const order: Step[] = ["source", "split", "schedule"];
-    return order.indexOf(step) > order.indexOf(s) ? "✓" : String(order.indexOf(s) + 1);
-  };
-  const cardClasses = (s: Step) => {
-    if (step === s) return "glass-card p-6 ring-2 ring-cyan-400/40 transition-all";
-    if (!canReach(s)) return "glass-card p-6 opacity-40 pointer-events-none transition-all";
-    return "glass-card p-6 opacity-80 transition-all";
   };
 
   return (
@@ -314,278 +209,178 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative max-w-6xl mx-auto pt-32 pb-40 px-4">
+      <section className="relative max-w-6xl mx-auto pt-32 pb-16 px-4">
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-8 max-w-xl">
           Increase Token Account Holders
         </h2>
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
+        <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="space-y-4">
-
-            {/* Step 1 */}
-            <div className={cardClasses("source")}>
-              <button type="button" className="accordion-header" onClick={() => toggleStep("source")}>
-                <div className={badgeClasses("source")}>{badgeText("source")}</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">1. Funding Source</h3>
-                  <p className="text-sm text-slate-300">Choose the wallet and collected SOL source for ATA holder growth.</p>
-                </div>
-                {step !== "source" && <Chevron open={isOpen("source")} />}
-              </button>
-              {isOpen("source") && (
-                <div className="space-y-4 mt-5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setClaimCreatorFees((v) => {
-                        const next = !v;
-                        // Turning claim on → SOL source, where a plain "burn" rule is meaningless.
-                        if (next) setRules((rs) => rs.map((r) => (r.type === "burn" ? { ...r, type: "buy-burn" as RuleType } : r)));
-                        return next;
-                      });
-                    }}
-                    onFocus={() => setHud(FIELD_HUD["source.claim"])}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${claimCreatorFees ? "bg-fuchsia-500/10 border-fuchsia-400/40" : "bg-surface-800/60 border-slate-700/40"}`}
-                  >
-                    <span className={`w-9 h-5 rounded-full shrink-0 flex items-center transition-all ${claimCreatorFees ? "bg-gradient-to-r from-fuchsia-500 to-cyan-400" : "bg-surface-700"}`}>
-                      <span className={`w-4 h-4 rounded-full bg-white shadow transition-all ${claimCreatorFees ? "translate-x-4" : "translate-x-0.5"}`} />
-                    </span>
-                    <span>
-                      <span className="block text-sm font-medium text-white">Collect Pump.fun creator rewards</span>
-                      <span className="block text-xs text-slate-400">Creator rewards are collected as SOL and held until the wallet reaches the holder-growth threshold.</span>
-                    </span>
-                  </button>
-                  {!claimCreatorFees && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1.5">Source Token Mint</label>
-                      <input
-                        className="glass-input font-mono text-sm"
-                        value={sourceMint}
-                        onFocus={() => setHud(STEP_HUD.source)}
-                        onChange={(e) => setSourceMint(e.target.value)}
-                        placeholder="SPL mint already held by this operations wallet"
-                      />
-                    </div>
-                  )}
-                  {claimCreatorFees && (
-                    <div className="p-3 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-400">
-                      Source: <span className="text-cyan-300 font-mono">collected creator rewards (SOL)</span> — execution waits for at least 0.5 spendable SOL.
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Creator Wallet Address</label>
-                    <input
-                      className="glass-input font-mono text-sm"
-                      value={sourceWallet}
-                      onFocus={() => setHud(FIELD_HUD["source.wallet"])}
-                      onChange={(e) => setSourceWallet(e.target.value)}
-                      placeholder={connected ? publicKey?.toBase58() || "Connect wallet to auto-fill" : "Connect wallet to auto-fill"}
-                    />
-                    {connected && !sourceWallet && (
-                      <button className="text-xs text-cyan-400 mt-1 hover:underline" onClick={() => setSourceWallet(publicKey!.toBase58())}>Use connected wallet</button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Operations Wallet Keypair</label>
-                    <input
-                      type="password"
-                      className="glass-input font-mono text-sm"
-                      value={creatorKeypair}
-                      onFocus={() => setHud(FIELD_HUD["source.keypair"])}
-                      onChange={(e) => setCreatorKeypair(e.target.value)}
-                      placeholder="Paste private key (base58) for auto-execution"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-1">Encrypted at rest, decrypted only in memory when the job runs. Use a dedicated operations wallet, not a primary treasury wallet.</p>
-                  </div>
-                  <button className="btn-primary w-full" onClick={() => goToStep("split")} disabled={!claimCreatorFees && !sourceMint.trim()}>Continue →</button>
-                </div>
-              )}
-            </div>
-
-            {/* Step 2 */}
-            <div className={cardClasses("split")}>
-              <button type="button" className="accordion-header" onClick={() => toggleStep("split")}>
-                <div className={badgeClasses("split")}>{badgeText("split")}</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">2. Growth Rules</h3>
-                  <p className="text-sm text-slate-300">Configure how collected SOL increases token-account holder count.</p>
-                </div>
-                {step !== "split" && <Chevron open={isOpen("split")} />}
-              </button>
-              {isOpen("split") && (
-                <div className="space-y-4 mt-5">
-                  {rules.map((rule, i) => (
-                    <div key={rule.id} className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rule {i + 1}</span>
-                        {rules.length > 1 && <button onClick={() => removeRule(rule.id)} className="text-xs text-rose-400 hover:text-rose-300">Remove</button>}
+            {!deployResult?.ok && (
+              <div className="glass-card p-0 overflow-hidden flex flex-col" style={{ height: "560px" }}>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-4">
+                  {turns.map((t, i) => (
+                    <div key={i} className={`flex ${t.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                          t.role === "user"
+                            ? "bg-gradient-to-br from-fuchsia-500/25 to-cyan-500/20 border border-fuchsia-400/30 text-white"
+                            : "bg-surface-800/70 border border-slate-700/40 text-slate-200"
+                        }`}
+                      >
+                        {t.content}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          value={rule.pct}
-                          onFocus={() => setHud(ruleHud(rule, "pct", i))}
-                          onChange={(e) => updateRule(rule.id, { pct: Math.min(100, Math.max(0, Number(e.target.value))) })}
-                          className="flex-1"
-                          style={{ background: `linear-gradient(to right, #d946ef ${rule.pct}%, #1e293b ${rule.pct}%)` }}
-                        />
-                        <span className="w-12 text-right font-mono text-sm text-cyan-300">{rule.pct}%</span>
-                        <select
-                          className="glass-input text-sm w-auto"
-                          value={rule.type}
-                          onFocus={() => setHud(ruleHud(rule, "type", i))}
-                          onChange={(e) => updateRule(rule.id, { type: e.target.value as RuleType })}
-                        >
-                          <option value="buy-burn">🔄 Swap → Burn</option>
-                          {!claimCreatorFees && <option value="burn">🔥 Burn tokens</option>}
-                          <option value="distribute">📤 Increase ATA holders</option>
-                          <option value="send">💸 Send to wallet</option>
-                        </select>
-                      </div>
-                      {(rule.type !== "burn") && (
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">
-                            {rule.type === "buy-burn" ? "Swap into (then burn)" : rule.type === "distribute" ? "Token used for ATA growth" : "Token to send"}
-                          </label>
-                          <input
-                            className="glass-input font-mono text-xs"
-                            value={rule.targetMint}
-                            onFocus={() => setHud(ruleHud(rule, "target", i))}
-                            onChange={(e) => updateRule(rule.id, { targetMint: e.target.value })}
-                            placeholder="SPL mint…"
-                          />
-                        </div>
-                      )}
-                      {rule.type === "send" && (
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">Destination</label>
-                          <input
-                            className="glass-input font-mono text-xs"
-                            value={rule.targetWallet}
-                            onFocus={() => setHud(ruleHud(rule, "target", i))}
-                            onChange={(e) => updateRule(rule.id, { targetWallet: e.target.value })}
-                            placeholder="Wallet…"
-                          />
-                        </div>
-                      )}
-                      {rule.type === "distribute" && (
-                        <div>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">Snapshot eligible holders from</label>
-                          <input
-                            className="glass-input font-mono text-xs"
-                            value={rule.holderMint}
-                            onFocus={() => setHud(ruleHud(rule, "target", i))}
-                            onChange={(e) => updateRule(rule.id, { holderMint: e.target.value })}
-                            placeholder="Token mint whose holders enter the lottery…"
-                          />
-                          <p className="text-[10px] text-slate-500 mt-1">Selection is randomized and equal-allocation. Holder balance is not a payout multiplier.</p>
-                        </div>
-                      )}
                     </div>
                   ))}
-                  <button onClick={addRule} className="w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-500 hover:border-cyan-400/40 hover:text-cyan-400 transition-all">+ Add Rule</button>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-slate-300">Total</span>
-                      <span className={`font-mono font-bold ${totalPct === 100 ? "text-emerald-400" : "text-rose-400"}`}>{totalPct}%</span>
+                  {sending && (
+                    <div className="flex justify-start">
+                      <div className="rounded-2xl px-4 py-2.5 text-sm bg-surface-800/70 border border-slate-700/40 text-slate-400">
+                        Thinking…
+                      </div>
                     </div>
-                    <div className="h-2 rounded-full bg-surface-800 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${totalPct === 100 ? "bg-gradient-to-r from-fuchsia-500 to-cyan-400" : "bg-rose-500/70"}`}
-                        style={{ width: `${Math.min(100, totalPct)}%` }}
+                  )}
+                </div>
+
+                <div className="p-4 border-t border-slate-700/40 space-y-3">
+                  {configComplete && !draft.readyToDeploy && (
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1.5 block">Operations wallet keypair (required to deploy — never sent to chat)</label>
+                      <input
+                        type="password"
+                        className="glass-input font-mono text-sm"
+                        value={keypair}
+                        onChange={(e) => setKeypair(e.target.value)}
+                        placeholder="Paste private key (base58)"
                       />
                     </div>
-                    {totalPct !== 100 && <p className="text-xs text-rose-400 mt-1.5">Must add up to 100%</p>}
-                  </div>
-                  <div className="flex gap-3">
-                    <button className="btn-secondary flex-1" onClick={() => goToStep("source")}>← Back</button>
-                    <button className="btn-primary flex-1" onClick={() => goToStep("schedule")} disabled={totalPct !== 100 || rules.length === 0}>Continue →</button>
-                  </div>
+                  )}
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      sendMessage(input);
+                    }}
+                  >
+                    <input
+                      className="glass-input text-sm flex-1"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={connected && !draft.sourceWallet ? `e.g. "yes, use ${publicKey?.toBase58().slice(0, 6)}…"` : "Type your answer…"}
+                      disabled={sending}
+                    />
+                    <button className="btn-primary shrink-0" type="submit" disabled={sending || !input.trim()}>
+                      Send
+                    </button>
+                  </form>
+                  {canDeploy && (
+                    <button className="btn-deploy w-full" onClick={deploy} disabled={deploying}>
+                      {deploying ? "Deploying…" : "⚡ Deploy ATA Growth Job"}
+                    </button>
+                  )}
+                  {deployResult && !deployResult.ok && (
+                    <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
+                      {deployResult.error || "Deploy failed"}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Step 3 */}
-            <div className={cardClasses("schedule")}>
-              <button type="button" className="accordion-header" onClick={() => toggleStep("schedule")}>
-                <div className={badgeClasses("schedule")}>{badgeText("schedule")}</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">3. Schedule</h3>
-                  <p className="text-sm text-slate-300">How often should the job check for collectible SOL?</p>
-                </div>
-                {step !== "schedule" && <Chevron open={isOpen("schedule")} />}
-              </button>
-              {isOpen("schedule") && (
-                <div className="space-y-4 mt-5">
-                  <div className="grid grid-cols-4 gap-2">
-                    {SCHEDULE_PRESETS.map((p) => (
-                      <button
-                        key={p.minutes}
-                        onClick={() => setIntervalMinutes(p.minutes)}
-                        onFocus={() => setHud(FIELD_HUD["schedule.cron"])}
-                        className={`px-3 py-2 rounded-lg text-xs font-mono transition-all ${intervalMinutes === p.minutes ? "bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-300" : "bg-surface-800 border border-slate-700/30 text-slate-300 hover:border-slate-500/50"}`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <button className="btn-secondary w-full" onClick={() => goToStep("split")}>← Back</button>
-                </div>
-              )}
-            </div>
-
-            {/* Done */}
-            {step === "done" && (
+            {deployResult?.ok && (
               <div className="glass-card p-8 text-center space-y-5">
-                <div className="text-5xl">{deployResult?.ok ? "✅" : "❌"}</div>
-                <h2 className="text-2xl font-bold text-white">
-                  {deployResult?.ok ? "ATA Growth Job Live" : "Deploy Failed"}
-                </h2>
+                <div className="text-5xl">✅</div>
+                <h2 className="text-2xl font-bold text-white">ATA Growth Job Live</h2>
                 <p className="text-slate-300 text-sm">
-                  {rules.filter(r => r.pct > 0).length} rule{rules.filter(r => r.pct > 0).length === 1 ? "" : "s"} → check every {formatInterval(intervalMinutes)}
+                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → check every {formatInterval(draft.intervalMinutes || 60)}
                 </p>
-
-                {deployResult?.message && (
-                  <div className={`p-3 rounded-xl text-sm ${deployResult.ok ? "bg-emerald-500/5 border border-emerald-500/20 text-emerald-300" : "bg-rose-500/5 border border-rose-500/20 text-rose-300"}`}>
+                {deployResult.message && (
+                  <div className="p-3 rounded-xl text-sm bg-emerald-500/5 border border-emerald-500/20 text-emerald-300">
                     {deployResult.message}
                   </div>
                 )}
-
-                {deployResult?.ok && (
-                  <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
-                    <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
-                    <div className="flex justify-between"><span>Rules</span><span className="text-white">{rules.filter(r => r.pct > 0).length}</span></div>
-                    <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(intervalMinutes)}</span></div>
-                    <p className="text-[10px] text-emerald-400 pt-1">It will collect, wait for the SOL threshold, then increase ATA holder count automatically.</p>
-                  </div>
-                )}
-
+                <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
+                  <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
+                  <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(draft.intervalMinutes || 60)}</span></div>
+                  <p className="text-[10px] text-emerald-400 pt-1">It will collect, wait for the SOL threshold, then increase ATA holder count automatically.</p>
+                </div>
                 <button className="btn-secondary" onClick={resetAll}>← Start New</button>
               </div>
             )}
           </div>
 
-          {/* HUD side panel */}
+          {/* HUD side panel — reacts to the draft the chat has extracted so far */}
           <div className="hidden lg:block sticky top-32">
             <div className="hud-panel">
-              <h4 className="text-sm font-bold text-cyan-300 tracking-wide mb-3">ATA Growth HUD — Technical Details</h4>
-              <p className="text-[11px] font-mono text-slate-500 mb-3 leading-relaxed">{hud.crumb}</p>
-              <p className="text-sm font-semibold text-white mb-1.5">{hud.title}</p>
-              <p className="text-xs text-slate-300 leading-relaxed">{hud.body}</p>
-              {hud.example && (
-                <p className="text-xs text-cyan-300/80 mt-2 leading-relaxed">{hud.example}</p>
-              )}
-              <div className="mt-4 pt-3 border-t border-slate-700/40">
-                <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1.5">
-                  <span>Validation Status:</span>
-                  <span className={totalPct === 100 || step !== "split" ? "text-emerald-400" : "text-amber-400"}>
-                    {totalPct === 100 || step !== "split" ? "Live" : "Pending"}
+              <h4 className="text-sm font-bold text-cyan-300 tracking-wide mb-3">Configuration HUD</h4>
+
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Funding source</span>
+                  <span className={sourceOk ? "text-emerald-400" : "text-amber-400"}>
+                    {draft.claimCreatorFees === true
+                      ? "Creator rewards (SOL)"
+                      : draft.claimCreatorFees === false
+                      ? draft.sourceMint
+                        ? `${draft.sourceMint.slice(0, 6)}…`
+                        : "Pending mint"
+                      : "Not set"}
                   </span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Wallet</span>
+                  <span className={walletOk ? "text-emerald-400" : "text-amber-400"}>
+                    {draft.sourceWallet
+                      ? `${draft.sourceWallet.slice(0, 6)}…`
+                      : connected
+                      ? "Use connected"
+                      : "Not set"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Keypair</span>
+                  <span className={keypairOk ? "text-emerald-400" : "text-amber-400"}>{keypairOk ? "Provided" : "Required"}</span>
+                </div>
+
+                <div className="pt-2 border-t border-slate-700/40">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-slate-400">Growth rules</span>
+                    <span className={rulesOk ? "text-emerald-400" : "text-amber-400"}>{rulesTotal(draft.rules)}%</span>
+                  </div>
+                  {(draft.rules || []).map((r, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px] text-slate-300 py-0.5">
+                      <span>{RULE_LABEL[r.type]}</span>
+                      <span className="font-mono text-cyan-300">{r.pct}%</span>
+                    </div>
+                  ))}
+                  {!draft.rules?.length && <p className="text-[11px] text-slate-500">No rules yet</p>}
+                </div>
+
+                <div className="pt-2 border-t border-slate-700/40">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Check interval</span>
+                    <span className="text-white font-mono">{draft.intervalMinutes ? formatInterval(draft.intervalMinutes) : "default (1h)"}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-slate-400">Drop threshold</span>
+                    <span className="text-white font-mono">{draft.dropThresholdSol ?? "0.5"} SOL</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-700/40">
+                <div className="flex items-center justify-between text-[11px] text-slate-300 mb-1.5">
+                  <span>Ready to deploy:</span>
+                  <span className={canDeploy ? "text-emerald-400" : "text-amber-400"}>{canDeploy ? "Yes" : "Not yet"}</span>
+                </div>
                 <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400" style={{ width: `${((STEP_ORDER.indexOf(step === "done" ? "schedule" : step) + 1) / STEP_ORDER.length) * 100}%` }} />
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 transition-all"
+                    style={{
+                      width: `${
+                        ([sourceOk, rulesOk, walletOk, keypairOk, draft.readyToDeploy === true].filter(Boolean).length / 5) * 100
+                      }%`,
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -595,16 +390,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {step !== "done" && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-surface-900 via-surface-900/95 to-transparent pt-8 pb-5 px-4">
-          <div className="max-w-6xl mx-auto lg:pr-[344px]">
-            <button className="btn-deploy w-full" onClick={deploy} disabled={step !== "schedule" || deploying}>
-              {deploying ? "Deploying…" : "⚡ Deploy ATA Growth Job"}
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

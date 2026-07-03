@@ -22,6 +22,9 @@ export interface PipelineRecord {
   intervalMinutes: number;
   enabled: boolean;
   claimCreatorFees: boolean;
+  // Spendable SOL (after the fee-float reserve) required before a distribution round fires.
+  // null means "use the platform default" (see moneyGate.ts MIN_SOL_DROP_LAMPORTS).
+  dropThresholdLamports: number | null;
   encryptedKeypair: EncryptedKeypair;
   lastRunAt: string | null;
   lastRunStatus: "success" | "error" | null;
@@ -42,6 +45,7 @@ interface PipelineRow {
   interval_minutes: number;
   enabled: boolean;
   claim_creator_fees: boolean;
+  drop_threshold_lamports: number | null;
   encrypted_keypair: EncryptedKeypair;
   last_run_at: string | null;
   last_run_status: "success" | "error" | null;
@@ -61,6 +65,7 @@ function fromRow(row: PipelineRow): PipelineRecord {
     intervalMinutes: row.interval_minutes,
     enabled: row.enabled,
     claimCreatorFees: row.claim_creator_fees,
+    dropThresholdLamports: row.drop_threshold_lamports,
     encryptedKeypair: row.encrypted_keypair,
     lastRunAt: row.last_run_at,
     lastRunStatus: row.last_run_status,
@@ -76,6 +81,7 @@ export async function createPipeline(input: {
   rules: SplitRule[];
   intervalMinutes: number;
   claimCreatorFees: boolean;
+  dropThresholdLamports?: number | null;
   encryptedKeypair: EncryptedKeypair;
 }): Promise<PipelineRecord> {
   const { data, error } = await getSupabase()
@@ -89,6 +95,7 @@ export async function createPipeline(input: {
       interval_minutes: input.intervalMinutes,
       enabled: true,
       claim_creator_fees: input.claimCreatorFees,
+      drop_threshold_lamports: input.dropThresholdLamports ?? null,
       encrypted_keypair: input.encryptedKeypair,
     })
     .select()
@@ -96,6 +103,15 @@ export async function createPipeline(input: {
 
   if (error) throw new Error(`Failed to create pipeline: ${error.message}`);
   return fromRow(data as PipelineRow);
+}
+
+export async function updateDropThreshold(id: string, dropThresholdLamports: number | null): Promise<void> {
+  const { error } = await getSupabase()
+    .from("pipelines")
+    .update({ drop_threshold_lamports: dropThresholdLamports })
+    .eq("id", id);
+
+  if (error) throw new Error(`Failed to update drop threshold for pipeline ${id}: ${error.message}`);
 }
 
 export async function listEnabledPipelines(): Promise<PipelineRecord[]> {

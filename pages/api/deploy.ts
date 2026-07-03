@@ -15,7 +15,7 @@ const WSOL_MINT = "So11111111111111111111111111111111111111112";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
-  const { sourceMint, sourceWallet, rules, cron, keypair, ownerAddress, claimCreatorFees } = req.body;
+  const { sourceMint, sourceWallet, rules, cron, keypair, ownerAddress, claimCreatorFees, dropThresholdSol } = req.body;
   const claiming = !!claimCreatorFees;
   // When collecting creator fees, the source is always collected SOL (wSOL) — no source-token mint needed.
   const effectiveSourceMint = claiming ? WSOL_MINT : (sourceMint || "").trim();
@@ -23,6 +23,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!effectiveSourceMint) return res.status(400).json({ error: "sourceMint required" });
   if (!Array.isArray(rules) || !rules.length) return res.status(400).json({ error: "rules required" });
   if (!keypair?.trim()) return res.status(400).json({ error: "keypair required — the ATA growth job can't execute without a signing key" });
+
+  // Spendable SOL required before a distribution round fires. Omit/blank to use the platform
+  // default (see lib/moneyGate.ts MIN_SOL_DROP_LAMPORTS).
+  let dropThresholdLamports: number | null = null;
+  if (dropThresholdSol !== undefined && dropThresholdSol !== null && dropThresholdSol !== "") {
+    const parsed = Number(dropThresholdSol);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return res.status(400).json({ error: "dropThresholdSol must be a non-negative number" });
+    }
+    dropThresholdLamports = Math.round(parsed * 1e9);
+  }
 
   const intervalMinutes = cronPresetToIntervalMinutes(cron);
 
@@ -35,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       rules: (rules as SplitRule[]).filter((r) => r.pct > 0),
       intervalMinutes,
       claimCreatorFees: claiming,
+      dropThresholdLamports,
       encryptedKeypair,
     });
 
