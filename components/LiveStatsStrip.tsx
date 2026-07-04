@@ -67,19 +67,19 @@ export default function LiveStatsStrip() {
   ];
 
   return (
-    <div className="w-full border-y-2 border-pink-400/30 bg-surface-900/80">
+    <div className="w-full border-y-2 border-cyan-400/40 bg-[#0a1220] shadow-[inset_0_1px_0_0_rgba(34,211,238,0.15),inset_0_-1px_0_0_rgba(34,211,238,0.15)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-center gap-y-2">
-        <span className="flex items-center gap-1.5 pr-4 sm:pr-6 mr-4 sm:mr-6 border-r border-white/10">
-          <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse shrink-0" />
+        <span className="flex items-center gap-1.5 pr-4 sm:pr-6 mr-4 sm:mr-6 border-r border-cyan-400/20">
+          <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse shrink-0 shadow-[0_0_6px_2px_rgba(52,211,153,0.6)]" />
           <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Live</span>
         </span>
         {stats.map((s, i) => (
           <span
             key={s.label}
-            className={`flex items-baseline gap-2 pr-4 sm:pr-6 mr-4 sm:mr-6 last:mr-0 last:pr-0 last:border-r-0 border-r border-white/10`}
+            className={`flex items-baseline gap-2 pr-4 sm:pr-6 mr-4 sm:mr-6 last:mr-0 last:pr-0 last:border-r-0 border-r border-cyan-400/20`}
           >
-            <span className="text-sm sm:text-base font-bold text-pink-200 font-mono">{s.value}</span>
-            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-500">{s.label}</span>
+            <span className="text-sm sm:text-base font-bold text-cyan-200 font-mono [text-shadow:0_0_10px_rgba(34,211,238,0.35)]">{s.value}</span>
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-slate-400">{s.label}</span>
           </span>
         ))}
       </div>
