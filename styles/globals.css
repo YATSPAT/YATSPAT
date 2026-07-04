@@ -83,6 +83,152 @@
   50% { box-shadow: 0 0 34px 0px rgba(236, 72, 153, 0.95), inset 0 0 24px -12px rgba(255, 255, 255, 0.6); }
 }
 
+/* ── Sidebar kinetic accents ("dazzle") ─────────────────────────────────
+   The panel surface stays static (.glass-card, unchanged). Only individual
+   interactive elements pulse/glow/animate — squared corners throughout,
+   no blur, no border-radius. */
+
+/* Thin animated gradient accent bar under the sidebar header — reuses the
+   marquee's own shine keyframe so the sidebar visibly "continues" the
+   marquee's energy the instant it opens, before the eye reaches any text. */
+.sidebar-accent-bar {
+  height: 2px;
+  width: 100%;
+  background-image: linear-gradient(90deg, #db2777 0%, #f0abfc 50%, #db2777 100%);
+  background-size: 200% 100%;
+  animation: marquee-shine 2.5s linear infinite;
+  box-shadow: 0 0 10px 0 rgba(236, 72, 153, 0.7);
+}
+
+/* Section label tick: small pulsing square before "Our token" so the
+   heading itself carries a live glow accent, not just a static underline. */
+.sidebar-label-tick {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  background: #ec4899;
+  animation: sidebar-tick-glow 1.6s ease-in-out infinite;
+}
+@keyframes sidebar-tick-glow {
+  0%, 100% { box-shadow: 0 0 4px 0 rgba(236, 72, 153, 0.7); opacity: 0.7; }
+  50% { box-shadow: 0 0 10px 2px rgba(236, 72, 153, 1); opacity: 1; }
+}
+
+/* Section-heading underline: a thin gradient bar that sweeps like the
+   marquee sheen, sitting under "OUR TOKEN". */
+@keyframes dazzle-underline-sweep {
+  to { background-position: 200% 0; }
+}
+.sidebar-heading-dazzle {
+  @apply relative inline-block pb-2;
+}
+.sidebar-heading-dazzle::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #ec4899, #f0abfc, #ec4899);
+  background-size: 200% 100%;
+  animation: dazzle-underline-sweep 2.5s linear infinite;
+}
+
+/* Close button: idle hairline box, corner marks snap out and it flashes
+   pink on hover — a deliberate little "ignite" rather than a constant glow. */
+.dazzle-close {
+  @apply relative text-slate-400 hover:text-white p-1.5 border border-white/10 transition-colors duration-150;
+}
+.dazzle-close::before,
+.dazzle-close::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: #ec4899;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dazzle-close::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+  transform: translate(3px, 3px);
+}
+.dazzle-close::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+  transform: translate(-3px, -3px);
+}
+.dazzle-close:hover {
+  box-shadow: 0 0 14px -2px rgba(236, 72, 153, 0.7);
+}
+.dazzle-close:hover::before,
+.dazzle-close:hover::after {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* Contract code block: idle state is just .glass-input; this adds a
+   slow-breathing pink edge so the sidebar's key payload (the CA) reads
+   as "live data" without being loud. */
+@keyframes dazzle-contract-breathe {
+  0%, 100% { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(236, 72, 153, 0.15), 0 0 10px -4px rgba(236, 72, 153, 0.3); }
+  50% { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(236, 72, 153, 0.35), 0 0 18px -2px rgba(236, 72, 153, 0.55); }
+}
+.dazzle-contract {
+  animation: dazzle-contract-breathe 3s ease-in-out infinite;
+}
+
+/* Copy button: solid .btn-secondary at rest; a bright pink sweep travels
+   across on hover, plus a quick "copied" flash state applied via JS. */
+.dazzle-copy {
+  @apply relative overflow-hidden;
+}
+.dazzle-copy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 20%, rgba(236, 72, 153, 0.35) 50%, transparent 80%);
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  transition: background-position 0.5s ease;
+  pointer-events: none;
+}
+.dazzle-copy:hover::before {
+  background-position: -50% 0;
+}
+.dazzle-copy.dazzle-copied {
+  border-color: #ec4899;
+  box-shadow: 0 0 16px -2px rgba(236, 72, 153, 0.8);
+}
+
+/* Link chips: idle borders match current design; on hover each chip gets
+   a pink glow + its own bottom accent bar drawing in from the left. */
+.dazzle-chip {
+  @apply relative transition-all duration-150;
+}
+.dazzle-chip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, #ec4899, #f0abfc);
+  transition: width 0.2s ease;
+}
+.dazzle-chip:hover {
+  box-shadow: 0 0 12px -3px rgba(236, 72, 153, 0.6);
+}
+.dazzle-chip:hover::after {
+  width: 100%;
+}
+
 /* Custom range slider */
 input[type="range"] {
   -webkit-appearance: none;
