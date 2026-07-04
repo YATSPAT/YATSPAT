@@ -44,8 +44,8 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
       <defs>
         <linearGradient id="reflector-logo-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#d946ef" />
-          <stop offset="55%" stopColor="#8b5cf6" />
-          <stop offset="100%" stopColor="#22d3ee" />
+          <stop offset="55%" stopColor="#db2777" />
+          <stop offset="100%" stopColor="#ec4899" />
         </linearGradient>
       </defs>
       <rect width="40" height="40" rx="11" fill="url(#reflector-logo-grad)" opacity="0.18" />
@@ -99,8 +99,8 @@ function CircuitBackground() {
     >
       <defs>
         <pattern id="circuit-dots" width="46" height="46" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="1.4" fill="#22d3ee" opacity="0.7" />
-          <path d="M1 1 L1 23 L23 23 L23 45" stroke="#22d3ee" strokeWidth="0.6" opacity="0.32" fill="none" />
+          <circle cx="1" cy="1" r="1.4" fill="#ec4899" opacity="0.7" />
+          <path d="M1 1 L1 23 L23 23 L23 45" stroke="#ec4899" strokeWidth="0.6" opacity="0.32" fill="none" />
         </pattern>
         <radialGradient id="circuit-fade" cx="80%" cy="35%" r="65%">
           <stop offset="0%" stopColor="white" stopOpacity="1" />
@@ -300,7 +300,7 @@ export default function Home() {
   };
 
   return (
-    <main id="top" className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-purple-900/40 overflow-hidden">
+    <main id="top" className="relative min-h-screen bg-gradient-to-br from-surface-900 via-surface-900 to-pink-900/40 overflow-hidden">
       <CircuitBackground />
 
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
@@ -329,13 +329,13 @@ export default function Home() {
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
-            <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #22d3ee)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
+            <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #ec4899)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
             {connected && (signedIn ? (
               <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> SIWS ✓
               </button>
             ) : (
-              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-xs font-medium hover:bg-cyan-500/25 transition-all disabled:opacity-50">
+              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pink-500/15 border border-pink-400/30 text-pink-300 text-xs font-medium hover:bg-pink-500/25 transition-all disabled:opacity-50">
                 {signing ? "Signing…" : "Sign In With Solana"}
               </button>
             ))}
@@ -363,7 +363,7 @@ export default function Home() {
           </div>
 
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 mb-2.5">Our token</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-pink-300 mb-2.5">Our token</h4>
             <TokenDetails />
           </div>
         </div>
@@ -392,7 +392,7 @@ export default function Home() {
       <section className="relative max-w-4xl mx-auto pt-16 pb-10 px-4 text-center">
         <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.05]">
           Airdrop{" "}
-          <span className="italic bg-gradient-to-r from-fuchsia-400 via-purple-400 to-cyan-300 bg-clip-text text-transparent">anyone</span>{" "}
+          <span className="italic bg-gradient-to-r from-fuchsia-400 via-pink-400 to-pink-300 bg-clip-text text-transparent">anyone</span>{" "}
           with pump.fun creator fees.
         </h1>
         <div className="mt-6 max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/[0.06] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.7)]">
@@ -485,7 +485,7 @@ export default function Home() {
                             className="flex-1"
                             style={{ background: `linear-gradient(to right, #d946ef ${rule.pct}%, #1e293b ${rule.pct}%)` }}
                           />
-                          <span className="w-12 text-right font-mono text-sm text-cyan-300">{rule.pct}%</span>
+                          <span className="w-12 text-right font-mono text-sm text-pink-300">{rule.pct}%</span>
                         </div>
 
                         {rule.type === "distribute" && (
@@ -527,7 +527,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={addRule}
-                    className="mt-3 w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300 transition-colors"
+                    className="mt-3 w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-pink-400/40 hover:text-pink-300 transition-colors"
                   >
                     + Add another
                   </button>
@@ -592,7 +592,7 @@ export default function Home() {
                 </div>
                 <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
-                  <div className="flex justify-between"><span>Timing</span><span className="text-cyan-300 font-mono">continuous</span></div>
+                  <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">continuous</span></div>
                   <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
                 </div>
                 <button className="btn-deploy w-full" onClick={activate} disabled={activating}>
@@ -629,7 +629,7 @@ export default function Home() {
           {/* HUD side panel — reacts to the draft the chat has extracted so far */}
           <div className="hidden lg:block sticky top-32">
             <div className="hud-panel">
-              <h4 className="text-sm font-bold text-cyan-300 tracking-wide mb-3">Configuration HUD</h4>
+              <h4 className="text-sm font-bold text-pink-300 tracking-wide mb-3">Configuration HUD</h4>
 
               <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
@@ -659,7 +659,7 @@ export default function Home() {
                   {(draft.rules || []).map((r, i) => (
                     <div key={i} className="flex items-center justify-between text-[11px] text-slate-300 py-0.5">
                       <span>{RULE_LABEL[r.type]}</span>
-                      <span className="font-mono text-cyan-300">{r.pct}%</span>
+                      <span className="font-mono text-pink-300">{r.pct}%</span>
                     </div>
                   ))}
                   {!draft.rules?.length && <p className="text-[11px] text-slate-500">No rules yet</p>}
@@ -692,7 +692,7 @@ export default function Home() {
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={t.image} alt={label} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
                             ) : (
-                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
                                 {initial}
                               </span>
                             )}
@@ -712,7 +712,7 @@ export default function Home() {
                 </div>
                 <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400 transition-all"
+                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-400 transition-all"
                     style={{
                       width: `${
                         ([mintOk, rulesOk, deployResult?.ok, activated].filter(Boolean).length / 4) * 100

@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: string | null }) {
       ? { cls: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300", dot: "bg-emerald-400", label: "live" }
       : status === "error"
       ? { cls: "bg-rose-500/15 border-rose-500/30 text-rose-300", dot: "bg-rose-400", label: "attention" }
-      : { cls: "bg-cyan-500/15 border-cyan-400/30 text-cyan-300", dot: "bg-cyan-400", label: "new" };
+      : { cls: "bg-pink-500/15 border-pink-400/30 text-pink-300", dot: "bg-pink-400", label: "new" };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-medium ${map.cls}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${map.dot} animate-pulse`} />
@@ -87,7 +87,7 @@ function TokenCard({ p }: { p: PublicPipeline }) {
             className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
           />
         ) : (
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
             {initial}
           </div>
         )}
@@ -99,7 +99,7 @@ function TokenCard({ p }: { p: PublicPipeline }) {
 
       <div className="mt-3 pt-3 border-t border-white/[0.05]">
         <div className="text-[10px] uppercase tracking-wider text-slate-500">SOL sent out</div>
-        <div className="text-lg font-bold text-emerald-300 font-mono leading-tight">◎ {fmtSol(outSol)}</div>
+        <div className="text-lg font-bold text-pink-300 font-mono leading-tight">◎ {fmtSol(outSol)}</div>
       </div>
     </a>
   );
