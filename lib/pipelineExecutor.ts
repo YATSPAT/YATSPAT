@@ -545,7 +545,7 @@ async function executeRule(
   }
 }
 
-export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean; results: RuleResult[]; error?: string; summary?: string }> {
+export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean; results: RuleResult[]; error?: string; summary?: string; outLamports?: number }> {
   const results: RuleResult[] = [];
 
   try {
@@ -647,6 +647,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
     }
 
     const failures: string[] = [];
+    let outLamports = 0; // SOL actually deployed this run (swapped/distributed/sent)
     for (let i = 0; i < record.rules.length; i++) {
       const rule = record.rules[i];
       const ruleAmountRaw = Math.floor(sourceBalance * (rule.pct / 100));
@@ -654,6 +655,15 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       try {
         const result = await executeRule(keypair, record.id, record.sourceMint, sourceAta, ruleAmountRaw, rule, isSol);
         results.push(result);
+        // Count the SOL that left the wallet: the amount swapped (distribute/buy-burn) or sent.
+        // Skipped/no-op rules don't count. Only meaningful in SOL-source (creator-fee) mode.
+        if (isSol) {
+          const r = result as Record<string, unknown>;
+          if (!r.skipped && !r.error) {
+            const spent = Number(r.swappedRaw ?? r.lamports ?? ruleAmountRaw);
+            if (Number.isFinite(spent) && spent > 0) outLamports += spent;
+          }
+        }
       } catch (err: unknown) {
         // Record the exact failure per-rule and keep going, so one run surfaces every problem
         // rather than aborting on the first and hiding the rest.
@@ -663,8 +673,8 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       }
     }
 
-    if (failures.length) return { ok: false, results, error: failures.join(" | ") };
-    return { ok: true, results };
+    if (failures.length) return { ok: false, results, error: failures.join(" | "), outLamports };
+    return { ok: true, results, outLamports };
   } catch (err: unknown) {
     return { ok: false, results, error: describeError(err) };
   }

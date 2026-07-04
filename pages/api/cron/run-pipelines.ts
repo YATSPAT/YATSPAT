@@ -51,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? result.summary ?? `${result.results.length} rules executed`
           : result.error || "unknown error",
         results: result.results,
+        outLamports: result.outLamports,
       });
       summary.push({ id: record.id, ran: true, status: result.ok ? "success" : "error" });
     } catch (err: unknown) {

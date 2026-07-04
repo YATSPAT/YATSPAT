@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Explicit safe columns only — must never include encrypted_keypair.
     const { data, error } = await getSupabase()
       .from("pipelines")
-      .select("id, source_mint, fee_mint, source_wallet, rules, interval_minutes, claim_creator_fees, last_run_at, last_run_status, last_run_summary, created_at")
+      .select("id, source_mint, fee_mint, source_wallet, rules, interval_minutes, claim_creator_fees, total_out_lamports, last_run_at, last_run_status, last_run_summary, created_at")
       .eq("enabled", true)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -55,6 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         targetTokens,
         rules: rules.map((r: any) => ({ type: r.type, pct: r.pct })),
         intervalMinutes: p.interval_minutes,
+        totalOutSol: Number(p.total_out_lamports ?? 0) / 1e9,
         lastRunStatus: p.last_run_status ?? null,
         lastRunSummary: p.last_run_summary ?? null,
         lastRunAt: p.last_run_at ?? null,

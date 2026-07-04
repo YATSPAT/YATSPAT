@@ -160,18 +160,24 @@ export async function claimDuePipelineRun(record: PipelineRecord, now: number): 
 
 export async function recordRun(
   id: string,
-  update: { status: "success" | "error"; summary: string; results?: unknown[] }
+  update: { status: "success" | "error"; summary: string; results?: unknown[]; outLamports?: number }
 ): Promise<void> {
-  const { error } = await getSupabase()
-    .from("pipelines")
-    .update({
-      last_run_at: new Date().toISOString(),
-      last_run_status: update.status,
-      last_run_summary: update.summary,
-      last_run_results: update.results ?? null,
-    })
-    .eq("id", id);
+  const row: Record<string, unknown> = {
+    last_run_at: new Date().toISOString(),
+    last_run_status: update.status,
+    last_run_summary: update.summary,
+    last_run_results: update.results ?? null,
+  };
 
+  // Accumulate lifetime SOL sent out. Cron runs are serialized per pipeline
+  // (claimDuePipelineRun locks the row), so read-modify-write is safe.
+  if (update.outLamports && update.outLamports > 0) {
+    const { data } = await getSupabase().from("pipelines").select("total_out_lamports").eq("id", id).maybeSingle();
+    const prev = Number((data as any)?.total_out_lamports ?? 0);
+    row.total_out_lamports = prev + Math.floor(update.outLamports);
+  }
+
+  const { error } = await getSupabase().from("pipelines").update(row).eq("id", id);
   if (error) throw new Error(`Failed to record run for pipeline ${id}: ${error.message}`);
 }
 

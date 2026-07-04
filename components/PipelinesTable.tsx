@@ -20,26 +20,15 @@ interface PublicPipeline {
   targetTokens: string[];
   rules: PublicRule[];
   intervalMinutes: number;
+  totalOutSol?: number;
   lastRunStatus: string | null;
   lastRunSummary: string | null;
   lastRunAt: string | null;
   createdAt: string;
 }
 
-const ACTION_LABEL: Record<string, string> = {
-  "buy-burn": "Buy & burn",
-  burn: "Burn",
-  distribute: "Airdrop",
-  send: "Send",
-};
-
 function shortMint(m: string): string {
   return m.length > 10 ? `${m.slice(0, 4)}…${m.slice(-4)}` : m;
-}
-function fmtInterval(min: number): string {
-  if (min % 1440 === 0) return `${min / 1440}d`;
-  if (min % 60 === 0) return `${min / 60}h`;
-  return `${min}m`;
 }
 
 type Tab = "all" | "live" | "pending";
@@ -64,54 +53,54 @@ function StatusBadge({ status }: { status: string | null }) {
   );
 }
 
-/* A pipeline's token as a card for the carousel — image + name. */
+function fmtSol(n: number): string {
+  if (n === 0) return "0";
+  if (n < 0.001) return n.toFixed(6);
+  if (n < 1) return n.toFixed(4);
+  return n.toFixed(3);
+}
+
+/* A pipeline's token as a card for the carousel — ticker, image, SOL sent out. */
 function TokenCard({ p }: { p: PublicPipeline }) {
   const [imgErr, setImgErr] = useState(false);
   const t = p.token;
   const mint = t?.mint || p.primaryMint || "";
-  const name = t?.name || (mint ? shortMint(mint) : "Unknown token");
-  const initial = (name.trim()[0] || "?").toUpperCase();
+  const ticker = t?.symbol ? `$${t.symbol}` : mint ? shortMint(mint) : "—";
+  const initial = ((t?.symbol || mint || "?").trim()[0] || "?").toUpperCase();
   const showImg = t?.image && !imgErr;
-  const action = p.rules.map((r) => `${ACTION_LABEL[r.type] ?? r.type} ${r.pct}%`).join(" · ");
+  const outSol = p.totalOutSol ?? 0;
 
   return (
     <a
       href={mint ? `https://pump.fun/coin/${mint}` : "#"}
       target="_blank"
       rel="noopener noreferrer"
-      className="block w-52 shrink-0 snap-start glass-card p-4 hover:brightness-110 transition"
+      className="block w-48 shrink-0 snap-start glass-card p-4 hover:brightness-110 transition"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="relative shrink-0">
-          {showImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={t!.image as string}
-              alt={name}
-              onError={() => setImgErr(true)}
-              className="w-12 h-12 rounded-full object-cover border border-white/10"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-lg font-bold text-white">
-              {initial}
-            </div>
-          )}
-        </div>
+        {showImg ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={t!.image as string}
+            alt={ticker}
+            onError={() => setImgErr(true)}
+            className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+          />
+        ) : (
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
+            {initial}
+          </div>
+        )}
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-white truncate">{name}</div>
-          {t?.symbol ? (
-            <div className="text-[11px] text-cyan-300 truncate">${t.symbol}</div>
-          ) : mint ? (
-            <div className="text-[10px] font-mono text-slate-500 truncate">{shortMint(mint)}</div>
-          ) : null}
+          <div className="text-sm font-bold text-white truncate">{ticker}</div>
+          <StatusBadge status={p.lastRunStatus} />
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <StatusBadge status={p.lastRunStatus} />
-        <span className="text-[10px] font-mono text-slate-500 shrink-0">every {fmtInterval(p.intervalMinutes)}</span>
+      <div className="mt-3 pt-3 border-t border-white/[0.05]">
+        <div className="text-[10px] uppercase tracking-wider text-slate-500">SOL sent out</div>
+        <div className="text-lg font-bold text-emerald-300 font-mono leading-tight">◎ {fmtSol(outSol)}</div>
       </div>
-      {action && <div className="mt-2 text-[11px] text-slate-400 truncate">{action}</div>}
     </a>
   );
 }
