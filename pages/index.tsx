@@ -391,7 +391,7 @@ export default function Home() {
           title="Click for token info"
           className="marquee-bombast w-full block overflow-hidden cursor-pointer border-y-2 border-pink-300 bg-gradient-to-r from-pink-600 via-fuchsia-400 to-pink-600 bg-[length:200%_100%] hover:brightness-110 transition"
         >
-          <div className="flex whitespace-nowrap animate-[ticker_13s_linear_infinite] py-3">
+          <div className="flex whitespace-nowrap animate-[ticker_13s_linear_infinite] py-5">
             {[...Array(6)].flatMap((_, dup) =>
               ["$STIMMY", "ON PUMP.FUN", "$STIMMY", "CLICK HERE FOR INFO"].map((t, i) => (
                 <span
