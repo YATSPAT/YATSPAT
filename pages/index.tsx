@@ -4,6 +4,8 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import PipelinesTable from "../components/PipelinesTable";
 import { formatInterval } from "../lib/schedule";
+import { HOLDER_MODE_MAX_RECIPIENTS } from "../lib/lotteryDistribution";
+import type { HolderMode } from "../lib/lotteryDistribution";
 
 type RuleType = "burn" | "buy-burn" | "distribute" | "send";
 
@@ -13,6 +15,7 @@ interface DraftRule {
   targetMint?: string;
   targetWallet?: string;
   holderMint?: string;
+  holderMode?: HolderMode;
 }
 
 interface Draft {
@@ -36,7 +39,15 @@ const RULE_OPTIONS: { type: RuleType; label: string; hint: string }[] = [
   { type: "send", label: "💸 Send to a wallet", hint: "Route the SOL straight to a wallet you choose." },
 ];
 
-const newRule = (): DraftRule => ({ type: "distribute", pct: 0, targetMint: "", targetWallet: "", holderMint: "" });
+// Holder-reach modes for airdrops — the payout split is always equal, so a lower cap on
+// recipients means a bigger share per holder, and a higher cap means broader reach.
+const HOLDER_MODES: { key: HolderMode; label: string; hint: string }[] = [
+  { key: "bless", label: "Bless", hint: "10% of total per holder" },
+  { key: "here", label: "@Here", hint: "50% of max" },
+  { key: "spam", label: "Spam", hint: "Max holders per buy" },
+];
+
+const newRule = (): DraftRule => ({ type: "distribute", pct: 0, targetMint: "", targetWallet: "", holderMint: "", holderMode: "spam" });
 
 function Logo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -146,6 +157,7 @@ interface ValidatedRule {
   targetMint?: string;
   targetWallet?: string;
   holderMint?: string;
+  holderMode?: HolderMode;
 }
 
 function tokenLabel(mint: string, tokenInfo: Record<string, HudToken>): string {
@@ -157,7 +169,9 @@ function tokenLabel(mint: string, tokenInfo: Record<string, HudToken>): string {
 // as "the exact workflow that will be generated" before the user commits to creating it.
 function describeRule(r: ValidatedRule, tokenInfo: Record<string, HudToken>): string {
   if (r.type === "distribute") {
-    return `${r.pct}% — swap into ${tokenLabel(r.targetMint || "", tokenInfo)} and airdrop it to every holder of ${tokenLabel(r.holderMint || "", tokenInfo)}`;
+    const mode = HOLDER_MODES.find((m) => m.key === (r.holderMode || "spam"));
+    const cap = HOLDER_MODE_MAX_RECIPIENTS[r.holderMode || "spam"];
+    return `${r.pct}% — swap into ${tokenLabel(r.targetMint || "", tokenInfo)} and airdrop it to up to ${cap} holders of ${tokenLabel(r.holderMint || "", tokenInfo)} (${mode?.label ?? "Spam"} mode)`;
   }
   if (r.type === "buy-burn") {
     return `${r.pct}% — swap into ${tokenLabel(r.targetMint || "", tokenInfo)} and burn it forever`;
@@ -311,6 +325,7 @@ export default function Home() {
             targetMint: (r.targetMint || "").trim(),
             targetWallet: (r.targetWallet || "").trim(),
             holderMint: (r.holderMint || "").trim(),
+            holderMode: r.holderMode,
           })),
           cron: draft.intervalMinutes || 60,
           dropThresholdSol: draft.dropThresholdSol ?? undefined,
@@ -341,6 +356,7 @@ export default function Home() {
             targetMint: (r.targetMint || "").trim(),
             targetWallet: (r.targetWallet || "").trim(),
             holderMint: (r.holderMint || "").trim(),
+            holderMode: r.holderMode,
           })),
           dropThresholdSol: draft.dropThresholdSol ?? undefined,
         }),
@@ -590,6 +606,31 @@ export default function Home() {
                               onChange={(e) => updateRule(i, { targetMint: e.target.value })}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
+                            <div>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {HOLDER_MODES.map((m) => {
+                                  const active = (rule.holderMode || "spam") === m.key;
+                                  return (
+                                    <button
+                                      key={m.key}
+                                      type="button"
+                                      onClick={() => updateRule(i, { holderMode: m.key })}
+                                      className={`px-2 py-1.5 rounded-none border text-center transition-colors ${
+                                        active
+                                          ? "bg-pink-500/20 border-pink-400/50 text-pink-100"
+                                          : "border-white/[0.06] text-slate-400 hover:border-pink-400/30 hover:text-slate-200"
+                                      }`}
+                                    >
+                                      <div className="text-xs font-bold">{m.label}</div>
+                                      <div className="text-[10px] opacity-80">{m.hint}</div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-1.5">
+                                Up to {HOLDER_MODE_MAX_RECIPIENTS[rule.holderMode || "spam"]} holders share the payout equally.
+                              </p>
+                            </div>
                           </>
                         )}
                         {rule.type === "buy-burn" && (

@@ -21,7 +21,14 @@ import bs58 from "bs58";
 import { decryptKeypair } from "./crypto";
 import { collectSharedCreatorFees } from "./feeCollect";
 import { computePlatformFee, PLATFORM_FEE_WALLET, PLATFORM_FEE_BPS, MIN_FEE_LAMPORTS } from "./platformFee";
-import { allocateEqualRawAmounts, planLotteryDistribution, MAX_LOTTERY_RECIPIENTS, MISSING_ATA_RECIPIENT_COST_LAMPORTS } from "./lotteryDistribution";
+import {
+  allocateEqualRawAmounts,
+  planLotteryDistribution,
+  MISSING_ATA_RECIPIENT_COST_LAMPORTS,
+  HOLDER_MODE_MAX_RECIPIENTS,
+  isHolderMode,
+} from "./lotteryDistribution";
+import type { HolderMode } from "./lotteryDistribution";
 import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
@@ -466,6 +473,9 @@ async function executeRule(
         | null = null;
       let holders: TokenHolder[] = [];
 
+      const holderMode: HolderMode = isHolderMode(rule.holderMode) ? rule.holderMode : "spam";
+      const maxRecipients = HOLDER_MODE_MAX_RECIPIENTS[holderMode];
+
       if (isSol) {
         const snapshot = await getLotteryHolderSnapshot(rule.holderMint, mintPk, programId, keypair.publicKey);
         const seed = `${pipelineId}:${rule.holderMint}:${rule.targetMint}:${Date.now()}`;
@@ -477,13 +487,13 @@ async function executeRule(
           })),
           poolLamports: ruleAmountRaw,
           seed,
-          maxRecipients: MAX_LOTTERY_RECIPIENTS,
+          maxRecipients,
         });
         if (!lottery) {
           return {
             type: "distribute", pct: rule.pct, skipped: true,
             note: `pool of ${(ruleAmountRaw / 1e9).toFixed(6)} SOL cannot fund a lottery distribution after the minimum swap and recipient-cost reserve`,
-            lottery: { candidateHolders: snapshot.length, maxRecipients: MAX_LOTTERY_RECIPIENTS },
+            lottery: { candidateHolders: snapshot.length, maxRecipients },
           };
         }
         swapAmountRaw = lottery.swapLamports;
@@ -508,7 +518,7 @@ async function executeRule(
         type: "distribute", pct: rule.pct,
         swappedRaw: swapAmountRaw, receivedRaw: received.toString(),
         swapTxid: swapResult.txid, totalHolders: holders.length, distributed: distResults.length,
-        allocationMode: "equal-max-recipients",
+        allocationMode: "equal-max-recipients", holderMode,
         ...(lottery ? {
           lottery: {
             seed: lottery.seed,
@@ -520,7 +530,7 @@ async function executeRule(
             rentBudgetLamports: lottery.rentBudgetLamports,
             missingAtaCostLamports: MISSING_ATA_RECIPIENT_COST_LAMPORTS,
             skippedForBudget: lottery.skippedForBudget,
-            maxRecipients: MAX_LOTTERY_RECIPIENTS,
+            maxRecipients,
           },
         } : {}),
         distributions: distResults.slice(0, 20),

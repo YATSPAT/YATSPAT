@@ -5,6 +5,19 @@ export const MIN_SWAP_LAMPORTS = 2_100_000;
 // per-recipient rent cost — see moneyGate.ts MIN_SOL_DROP_LAMPORTS.
 export const MAX_LOTTERY_RECIPIENTS = 245;
 
+// Holder-reach modes for "distribute" rules — a per-rule cap on how many lottery-selected
+// holders share the swapped amount. Fewer recipients means a bigger equal-split payout each
+// (the split is always equal, never balance-weighted — see allocateEqualRawAmounts below).
+export type HolderMode = "bless" | "here" | "spam";
+export const HOLDER_MODE_MAX_RECIPIENTS: Record<HolderMode, number> = {
+  bless: 10,
+  here: Math.floor(MAX_LOTTERY_RECIPIENTS * 0.5),
+  spam: MAX_LOTTERY_RECIPIENTS,
+};
+export function isHolderMode(v: unknown): v is HolderMode {
+  return v === "bless" || v === "here" || v === "spam";
+}
+
 export interface LotteryCandidate {
   address: string;
   balanceRaw: bigint;

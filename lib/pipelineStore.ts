@@ -2,6 +2,7 @@ import { getSupabase } from "./supabase";
 import type { EncryptedKeypair } from "./crypto";
 
 export type RuleType = "burn" | "buy-burn" | "distribute" | "send";
+export type HolderMode = "bless" | "here" | "spam";
 
 export interface SplitRule {
   type: RuleType;
@@ -9,6 +10,9 @@ export interface SplitRule {
   targetMint: string;
   targetWallet: string;
   holderMint: string;
+  // "distribute" only — how many lottery-selected holders share the payout. Undefined on
+  // legacy rows predating this field; treat as "spam" (max reach, the prior fixed behavior).
+  holderMode?: HolderMode;
 }
 
 export interface PipelineRecord {

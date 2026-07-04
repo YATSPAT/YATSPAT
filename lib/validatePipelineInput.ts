@@ -1,5 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import type { SplitRule } from "./pipelineStore";
+import { isHolderMode } from "./lotteryDistribution";
 
 /* ── Shared pipeline-input validation ────────────────────────────────
    Used by both /api/deploy (creates the pipeline) and /api/validate (dry
@@ -43,6 +44,9 @@ export function validatePipelineInput(body: {
       targetMint: (r.targetMint || "").trim(),
       targetWallet: (r.targetWallet || "").trim(),
       holderMint: (r.holderMint || "").trim(),
+      // Normalize now so a stored rule always carries an explicit mode — "spam" (max reach)
+      // matches the fixed behavior this field replaces, so anything unset defaults to it.
+      holderMode: r.type === "distribute" ? (isHolderMode(r.holderMode) ? r.holderMode : "spam") : undefined,
     }));
   if (!cleanRules.length) return { ok: false, error: "at least one rule with pct > 0 is required" };
   const totalPct = cleanRules.reduce((s, r) => s + r.pct, 0);
