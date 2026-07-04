@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { claimDuePipelineRun, listEnabledPipelines, recordRun } from "../../../lib/pipelineStore";
-import { runPipeline, WSOL_MINT } from "../../../lib/pipelineExecutor";
-import { isCronEligible } from "../../../lib/schedulerGate";
+import { runPipeline } from "../../../lib/pipelineExecutor";
+import { isIntervalDue } from "../../../lib/schedulerGate";
 
 /* ── GET /api/cron/run-pipelines ─────────────────────────────────────
    Triggered by Vercel Cron (see vercel.json). Vercel sends
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const summary: { id: string; ran: boolean; status?: string }[] = [];
 
   for (const record of pipelines) {
-    if (!force && !isCronEligible(record, now, new Set([WSOL_MINT]))) {
+    if (!force && !isIntervalDue(record, now)) {
       summary.push({ id: record.id, ran: false });
       continue;
     }
@@ -52,6 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : result.error || "unknown error",
         results: result.results,
         outLamports: result.outLamports,
+        intervalMinutes: result.nextIntervalMinutes,
+        claimedLamports: result.claimedLamports,
       });
       summary.push({ id: record.id, ran: true, status: result.ok ? "success" : "error" });
     } catch (err: unknown) {

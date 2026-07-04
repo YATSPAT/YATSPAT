@@ -31,6 +31,7 @@ import {
 } from "./lotteryDistribution";
 import type { HolderMode } from "./lotteryDistribution";
 import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
+import { nextPollIntervalMinutes } from "./adaptivePolling";
 import type { PipelineRecord, SplitRule } from "./pipelineStore";
 
 const HELIUS_KEY = process.env.HELIUS_API_KEY || "";
@@ -565,7 +566,18 @@ async function executeRule(
   }
 }
 
-export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean; results: RuleResult[]; error?: string; summary?: string; outLamports?: number }> {
+export async function runPipeline(record: PipelineRecord): Promise<{
+  ok: boolean;
+  results: RuleResult[];
+  error?: string;
+  summary?: string;
+  outLamports?: number;
+  // Adaptive fee-collection polling — set only when this run completed a genuine poll (fee
+  // collection was attempted and didn't hard-fail), so a config error or crash leaves the
+  // pipeline's stored cadence untouched rather than misreading a failure as "fees dried up."
+  nextIntervalMinutes?: number;
+  claimedLamports?: number;
+}> {
   const results: RuleResult[] = [];
 
   try {
@@ -598,6 +610,19 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
           results.push({ type: "claim", pct: 0, skipped: true, note: claim.note });
         }
       }
+    }
+
+    // A genuine poll happened (collection was attempted and didn't hard-fail above) — adapt
+    // next run's check cadence based on whether fees are speeding up or slowing down.
+    let nextIntervalMinutes: number | undefined;
+    let pollClaimedLamports: number | undefined;
+    if (record.claimCreatorFees && isSol) {
+      nextIntervalMinutes = nextPollIntervalMinutes({
+        currentIntervalMinutes: record.intervalMinutes,
+        claimedLamportsThisPoll: claimedLamports,
+        previousClaimedLamports: record.lastClaimedLamports,
+      });
+      pollClaimedLamports = claimedLamports;
     }
 
     let sourceBalance = 0;
@@ -634,7 +659,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       const summary = lamports <= SOL_RESERVE_LAMPORTS
         ? `wallet has ${sol(lamports)} SOL but needs ${sol(SOL_RESERVE_LAMPORTS)} SOL reserve — nothing to spend`
         : `wallet has ${sol(lamports)} SOL; spendable ${sol(sourceBalance)} SOL is below ${sol(dropThresholdLamports)} SOL drop threshold`;
-      return { ok: true, results, summary };
+      return { ok: true, results, summary, nextIntervalMinutes, claimedLamports: pollClaimedLamports };
     }
 
     if (sourceBalance <= 0) {
@@ -648,7 +673,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
           : isSol
             ? "wallet SOL balance is 0 — nothing claimed to split yet"
             : "source-token balance is 0 — nothing to split yet";
-      return { ok: true, results, summary };
+      return { ok: true, results, summary, nextIntervalMinutes, claimedLamports: pollClaimedLamports };
     }
 
     // Platform fee: 1.5% off the top of the pool before growth rules run (disclosed in docs).
@@ -693,8 +718,10 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       }
     }
 
-    if (failures.length) return { ok: false, results, error: failures.join(" | "), outLamports };
-    return { ok: true, results, outLamports };
+    if (failures.length) {
+      return { ok: false, results, error: failures.join(" | "), outLamports, nextIntervalMinutes, claimedLamports: pollClaimedLamports };
+    }
+    return { ok: true, results, outLamports, nextIntervalMinutes, claimedLamports: pollClaimedLamports };
   } catch (err: unknown) {
     return { ok: false, results, error: describeError(err) };
   }

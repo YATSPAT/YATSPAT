@@ -38,6 +38,10 @@ export interface PipelineRecord {
   lastRunStatus: "success" | "error" | null;
   lastRunSummary: string | null;
   lastRunResults?: unknown[];
+  // Lamports collected by the fee-sharing crank on the LAST completed poll — compared against
+  // this poll's collection to adapt intervalMinutes (see lib/adaptivePolling.ts). null until
+  // the first successful poll.
+  lastClaimedLamports: number | null;
 }
 
 /* ── DB row uses snake_case; app code uses camelCase — convert at the boundary ── */
@@ -60,6 +64,7 @@ interface PipelineRow {
   last_run_status: "success" | "error" | null;
   last_run_summary: string | null;
   last_run_results: unknown[] | null;
+  last_claimed_lamports: number | null;
 }
 
 function fromRow(row: PipelineRow): PipelineRecord {
@@ -81,6 +86,7 @@ function fromRow(row: PipelineRow): PipelineRecord {
     lastRunStatus: row.last_run_status,
     lastRunSummary: row.last_run_summary,
     lastRunResults: row.last_run_results ?? undefined,
+    lastClaimedLamports: row.last_claimed_lamports ?? null,
   };
 }
 
@@ -164,7 +170,17 @@ export async function claimDuePipelineRun(record: PipelineRecord, now: number): 
 
 export async function recordRun(
   id: string,
-  update: { status: "success" | "error"; summary: string; results?: unknown[]; outLamports?: number }
+  update: {
+    status: "success" | "error";
+    summary: string;
+    results?: unknown[];
+    outLamports?: number;
+    // Adaptive fee-collection polling (see lib/adaptivePolling.ts) — only set on runs that
+    // completed a real poll (not on config errors or a hard collection failure), so a run
+    // that never actually polled leaves the stored cadence untouched.
+    intervalMinutes?: number;
+    claimedLamports?: number;
+  }
 ): Promise<void> {
   const row: Record<string, unknown> = {
     last_run_at: new Date().toISOString(),
@@ -180,6 +196,10 @@ export async function recordRun(
     const prev = Number((data as any)?.total_out_lamports ?? 0);
     row.total_out_lamports = prev + Math.floor(update.outLamports);
   }
+
+  if (update.intervalMinutes !== undefined) row.interval_minutes = update.intervalMinutes;
+  // 0 is a meaningful poll result (fees genuinely dried up) — must persist it, not just truthy values.
+  if (update.claimedLamports !== undefined) row.last_claimed_lamports = Math.floor(update.claimedLamports);
 
   const { error } = await getSupabase().from("pipelines").update(row).eq("id", id);
   if (error) throw new Error(`Failed to record run for pipeline ${id}: ${error.message}`);

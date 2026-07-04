@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isCronEligible } from "../lib/schedulerGate.ts";
+import { isIntervalDue } from "../lib/schedulerGate.ts";
 import type { PipelineRecord } from "../lib/pipelineStore.ts";
 
 function record(overrides: Partial<PipelineRecord>): PipelineRecord {
@@ -21,22 +21,22 @@ function record(overrides: Partial<PipelineRecord>): PipelineRecord {
     lastRunAt: "2026-07-02T00:00:00.000Z",
     lastRunStatus: "success",
     lastRunSummary: null,
+    lastClaimedLamports: null,
     ...overrides,
   };
 }
 
-test("isCronEligible ignores interval timing for money-based source mints", () => {
-  const now = Date.parse("2026-07-02T00:01:00.000Z");
-  assert.equal(
-    isCronEligible(record({ sourceMint: "SOL", intervalMinutes: 5 }), now, new Set(["SOL"])),
-    true
-  );
+test("isIntervalDue is due when the pipeline has never run", () => {
+  const now = Date.parse("2026-07-02T00:00:00.000Z");
+  assert.equal(isIntervalDue(record({ lastRunAt: null }), now), true);
 });
 
-test("isCronEligible keeps interval timing for non-money-based source mints", () => {
-  const now = Date.parse("2026-07-02T00:01:00.000Z");
-  assert.equal(
-    isCronEligible(record({ sourceMint: "TOKEN", intervalMinutes: 5 }), now, new Set(["SOL"])),
-    false
-  );
+test("isIntervalDue is not due before intervalMinutes has elapsed since the last run", () => {
+  const now = Date.parse("2026-07-02T00:01:00.000Z"); // 1 minute after lastRunAt
+  assert.equal(isIntervalDue(record({ intervalMinutes: 5 }), now), false);
+});
+
+test("isIntervalDue is due once intervalMinutes has elapsed since the last run", () => {
+  const now = Date.parse("2026-07-02T00:05:00.000Z"); // 5 minutes after lastRunAt
+  assert.equal(isIntervalDue(record({ intervalMinutes: 5 }), now), true);
 });

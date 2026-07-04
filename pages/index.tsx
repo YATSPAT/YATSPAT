@@ -4,7 +4,6 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import PipelinesTable from "../components/PipelinesTable";
 import LiveStatsStrip from "../components/LiveStatsStrip";
-import { formatInterval } from "../lib/schedule";
 import { HOLDER_MODE_MAX_RECIPIENTS } from "../lib/lotteryDistribution";
 import type { HolderMode } from "../lib/lotteryDistribution";
 
@@ -22,7 +21,6 @@ interface DraftRule {
 interface Draft {
   feeMint?: string;
   rules?: DraftRule[];
-  intervalMinutes?: number;
   dropThresholdSol?: number;
 }
 
@@ -263,7 +261,7 @@ export default function Home() {
   const { publicKey, connected } = useWallet();
   const { signedIn, signing, signIn, signOut } = useSiws();
 
-  const [draft, setDraft] = useState<Draft>({ rules: [{ ...newRule(), pct: 100 }], intervalMinutes: 60 });
+  const [draft, setDraft] = useState<Draft>({ rules: [{ ...newRule(), pct: 100 }] });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
   const [activating, setActivating] = useState(false);
@@ -345,7 +343,6 @@ export default function Home() {
             holderMint: (r.holderMint || "").trim(),
             holderMode: r.holderMode,
           })),
-          cron: draft.intervalMinutes || 60,
           dropThresholdSol: draft.dropThresholdSol ?? undefined,
           ownerAddress: signedIn ? publicKey?.toBase58() : undefined,
         }),
@@ -407,7 +404,7 @@ export default function Home() {
   };
 
   const resetAll = () => {
-    setDraft({ rules: [{ ...newRule(), pct: 100 }], intervalMinutes: 60 });
+    setDraft({ rules: [{ ...newRule(), pct: 100 }] });
     setDeployResult(null);
     setActivateResult(null);
   };
@@ -670,8 +667,9 @@ export default function Home() {
                 <div>
                   <label className="block text-sm font-semibold text-white mb-2">Timing</label>
                   <div className="rounded-none bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
-                    Checks every 10 minutes for collectible creator fees and fires a round as soon as the drop threshold
-                    below is met. Nothing to schedule.
+                    Checks every 5 minutes to start, then adapts: faster (down to every minute) while fees keep
+                    coming in, slower (up to once an hour) once they dry up. Fires a round as soon as the drop
+                    threshold below is met. Nothing to schedule.
                   </div>
                   <label className="block text-xs text-slate-400 mt-4 mb-1.5">SOL drop threshold (optional)</label>
                   <input
@@ -726,7 +724,7 @@ export default function Home() {
                 </div>
                 <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
-                  <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">every 10 min</span></div>
+                  <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">adaptive (1–60 min)</span></div>
                   <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
                 </div>
                 <button className="btn-deploy w-full" onClick={activate} disabled={activating}>
@@ -748,7 +746,7 @@ export default function Home() {
                 <div className="text-5xl">✅</div>
                 <h2 className="text-2xl font-bold text-white">Pipeline Live</h2>
                 <p className="text-slate-300 text-sm">
-                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → checking every 10 minutes
+                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → checking adaptively (1–60 min)
                 </p>
                 <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
                   <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
@@ -802,7 +800,7 @@ export default function Home() {
                 <div className="pt-2 border-t border-slate-700/40">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Timing</span>
-                    <span className="text-white font-mono">every 10 min</span>
+                    <span className="text-white font-mono">adaptive (1–60 min)</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-slate-400">Drop threshold</span>
