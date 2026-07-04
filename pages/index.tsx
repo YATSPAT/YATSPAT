@@ -456,7 +456,7 @@ export default function Home() {
       <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-slate-700/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-nowrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 min-w-0">
-            <a href="#top" className="flex items-center gap-2.5 shrink-0">
+            <a href="#top" data-tour="brand" className="flex items-center gap-2.5 shrink-0">
               <CoinLogo className="w-9 h-9" />
               <span className="text-lg font-bold text-white tracking-tight hidden sm:block">wen stimmy</span>
             </a>
@@ -600,7 +600,7 @@ export default function Home() {
                 </div>
 
                 {/* Rules */}
-                <div>
+                <div data-tour="rule-builder">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-semibold text-white">Where the fees go</label>
                     <span className={`text-xs font-mono ${total === 100 ? "text-emerald-400" : "text-amber-400"}`}>{total}% / 100%</span>
@@ -653,7 +653,7 @@ export default function Home() {
                               onChange={(e) => updateRule(i, { targetMint: e.target.value })}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
-                            <div>
+                            <div data-tour="holder-modes">
                               <div className="grid grid-cols-3 gap-1.5">
                                 {HOLDER_MODES.map((m) => {
                                   const active = (rule.holderMode || "spam") === m.key;
@@ -713,7 +713,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <div>
+                <div data-tour="drop-threshold">
                   <label className="block text-xs text-slate-400 mb-1.5">SOL drop threshold (optional)</label>
                   <input
                     type="number"
@@ -738,7 +738,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <button className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
+                <button data-tour="create-button" className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
                   {deploying ? "Creating…" : "⚡ Create pipeline"}
                 </button>
                 {mintOk && rulesOk && !validated && (
@@ -824,7 +824,7 @@ export default function Home() {
                     {draft.feeMint ? `${draft.feeMint.slice(0, 6)}…` : "Not set"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between" data-tour="wallet-hud">
                   <span className="text-slate-400">Pipeline wallet</span>
                   <span className={deployResult?.walletPublicKey ? "text-emerald-400" : "text-slate-500"}>
                     {deployResult?.walletPublicKey ? `${deployResult.walletPublicKey.slice(0, 6)}…` : "Generated on create"}
@@ -893,6 +893,7 @@ export default function Home() {
 
               <div className="mt-4 pt-3 border-t border-slate-700/40">
                 <button
+                  data-tour="validate-button"
                   onClick={validate}
                   disabled={validating}
                   className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
