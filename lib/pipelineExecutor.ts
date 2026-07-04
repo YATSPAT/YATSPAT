@@ -27,6 +27,7 @@ import {
   MISSING_ATA_RECIPIENT_COST_LAMPORTS,
   HOLDER_MODE_MAX_RECIPIENTS,
   isHolderMode,
+  scaleMaxRecipientsForSurplus,
 } from "./lotteryDistribution";
 import type { HolderMode } from "./lotteryDistribution";
 import { MIN_SOL_DROP_LAMPORTS, SOL_RESERVE_LAMPORTS, shouldDropWalletSol, sol, spendableWalletSolLamports } from "./moneyGate";
@@ -426,7 +427,8 @@ async function executeRule(
   sourceAta: PublicKey | null,
   ruleAmountRaw: number,
   rule: SplitRule,
-  isSol: boolean
+  isSol: boolean,
+  dropThresholdLamports: number
 ): Promise<RuleResult> {
   switch (rule.type) {
     case "burn": {
@@ -474,7 +476,15 @@ async function executeRule(
       let holders: TokenHolder[] = [];
 
       const holderMode: HolderMode = isHolderMode(rule.holderMode) ? rule.holderMode : "spam";
-      const maxRecipients = HOLDER_MODE_MAX_RECIPIENTS[holderMode];
+      // A pool bigger than this rule's usual share of the drop threshold (fees piled up over
+      // several cycles, say) scales the cap up so the surplus reaches more holders instead of
+      // just paying the same capped audience a bigger equal-split amount.
+      const maxRecipients = scaleMaxRecipientsForSurplus({
+        baseCap: HOLDER_MODE_MAX_RECIPIENTS[holderMode],
+        poolLamports: ruleAmountRaw,
+        dropThresholdLamports,
+        pct: rule.pct,
+      });
 
       if (isSol) {
         const snapshot = await getLotteryHolderSnapshot(rule.holderMint, mintPk, programId, keypair.publicKey);
@@ -663,7 +673,7 @@ export async function runPipeline(record: PipelineRecord): Promise<{ ok: boolean
       const ruleAmountRaw = Math.floor(sourceBalance * (rule.pct / 100));
       if (ruleAmountRaw <= 0) continue;
       try {
-        const result = await executeRule(keypair, record.id, record.sourceMint, sourceAta, ruleAmountRaw, rule, isSol);
+        const result = await executeRule(keypair, record.id, record.sourceMint, sourceAta, ruleAmountRaw, rule, isSol, dropThresholdLamports);
         results.push(result);
         // Count the SOL that left the wallet: the amount swapped (distribute/buy-burn) or sent.
         // Skipped/no-op rules don't count. Only meaningful in SOL-source (creator-fee) mode.

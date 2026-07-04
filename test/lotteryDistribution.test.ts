@@ -4,6 +4,7 @@ import {
   allocateEqualRawAmounts,
   MISSING_ATA_RECIPIENT_COST_LAMPORTS,
   planLotteryDistribution,
+  scaleMaxRecipientsForSurplus,
 } from "../lib/lotteryDistribution.ts";
 
 test("planLotteryDistribution is deterministic for the same seed", () => {
@@ -104,4 +105,29 @@ test("allocateEqualRawAmounts trims recipients that cannot receive at least one 
     { address: "a", amountRaw: 1n },
     { address: "b", amountRaw: 1n },
   ]);
+});
+
+test("scaleMaxRecipientsForSurplus leaves the cap alone at or below the calibrated pool size", () => {
+  assert.equal(
+    scaleMaxRecipientsForSurplus({ baseCap: 245, poolLamports: 500_000_000, dropThresholdLamports: 500_000_000, pct: 100 }),
+    245
+  );
+  assert.equal(
+    scaleMaxRecipientsForSurplus({ baseCap: 245, poolLamports: 250_000_000, dropThresholdLamports: 500_000_000, pct: 100 }),
+    245
+  );
+});
+
+test("scaleMaxRecipientsForSurplus scales the cap up proportionally to surplus over the rule's threshold share", () => {
+  // 2 SOL pool vs a 0.5 SOL threshold at 100% pct is 4x the calibration point.
+  assert.equal(
+    scaleMaxRecipientsForSurplus({ baseCap: 245, poolLamports: 2_000_000_000, dropThresholdLamports: 500_000_000, pct: 100 }),
+    980
+  );
+  // Same 4x surplus, but this rule is only 50% of the pool split, so its own calibration
+  // baseline is half the platform threshold.
+  assert.equal(
+    scaleMaxRecipientsForSurplus({ baseCap: 245, poolLamports: 1_000_000_000, dropThresholdLamports: 500_000_000, pct: 50 }),
+    980
+  );
 });

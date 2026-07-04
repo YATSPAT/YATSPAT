@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/run-pipelines", "schedule": "* * * * *" }
+    { "path": "/api/cron/run-pipelines", "schedule": "*/10 * * * *" }
   ],
   "functions": {
     "pages/api/cron/run-pipelines.ts": { "maxDuration": 300 }

@@ -687,8 +687,8 @@ export default function Home() {
                 <div>
                   <label className="block text-sm font-semibold text-white mb-2">Timing</label>
                   <div className="rounded-none bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
-                    Runs continuously — it checks for collectible creator fees every cycle and fires a round as soon as the
-                    drop threshold below is met. Nothing to schedule.
+                    Checks every 10 minutes for collectible creator fees and fires a round as soon as the drop threshold
+                    below is met. Nothing to schedule.
                   </div>
                   <label className="block text-xs text-slate-400 mt-4 mb-1.5">SOL drop threshold (optional)</label>
                   <input
@@ -743,7 +743,7 @@ export default function Home() {
                 </div>
                 <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
-                  <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">continuous</span></div>
+                  <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">every 10 min</span></div>
                   <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
                 </div>
                 <button className="btn-deploy w-full" onClick={activate} disabled={activating}>
@@ -765,7 +765,7 @@ export default function Home() {
                 <div className="text-5xl">✅</div>
                 <h2 className="text-2xl font-bold text-white">Pipeline Live</h2>
                 <p className="text-slate-300 text-sm">
-                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → running continuously
+                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → checking every 10 minutes
                 </p>
                 <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
                   <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
@@ -819,7 +819,7 @@ export default function Home() {
                 <div className="pt-2 border-t border-slate-700/40">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Timing</span>
-                    <span className="text-white font-mono">continuous</span>
+                    <span className="text-white font-mono">every 10 min</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-slate-400">Drop threshold</span>

@@ -18,6 +18,25 @@ export function isHolderMode(v: unknown): v is HolderMode {
   return v === "bless" || v === "here" || v === "spam";
 }
 
+// Each mode's cap above was calibrated for a rule pool the size of exactly its share of the
+// platform drop threshold (poolLamports == dropThresholdLamports * pct/100). When the actual
+// pool is bigger than that — fees piled up over several cycles, or a bigger creator than usual —
+// scale the cap up by the same ratio, so the surplus reaches more holders instead of just
+// making the same capped audience's equal-split payout bigger. Never scales down: a smaller
+// pool still gets planLotteryDistribution's own budget math to decide who's affordable.
+export function scaleMaxRecipientsForSurplus(input: {
+  baseCap: number;
+  poolLamports: number;
+  dropThresholdLamports: number;
+  pct: number;
+}): number {
+  const baselinePoolForRule = input.dropThresholdLamports * (input.pct / 100);
+  if (baselinePoolForRule <= 0) return input.baseCap;
+  const surplusRatio = input.poolLamports / baselinePoolForRule;
+  if (surplusRatio <= 1) return input.baseCap;
+  return Math.floor(input.baseCap * surplusRatio);
+}
+
 export interface LotteryCandidate {
   address: string;
   balanceRaw: bigint;
