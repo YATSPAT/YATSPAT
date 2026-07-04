@@ -46,8 +46,8 @@ function StatusBadge({ status }: { status: string | null }) {
       ? { cls: "bg-rose-500/15 border-rose-500/30 text-rose-300", dot: "bg-rose-400", label: "attention" }
       : { cls: "bg-pink-500/15 border-pink-400/30 text-pink-300", dot: "bg-pink-400", label: "new" };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-medium ${map.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${map.dot} animate-pulse`} />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`} />
       {map.label}
     </span>
   );
@@ -84,10 +84,10 @@ function TokenCard({ p }: { p: PublicPipeline }) {
             src={t!.image as string}
             alt={ticker}
             onError={() => setImgErr(true)}
-            className="w-11 h-11 rounded-full object-cover border border-white/10 shrink-0"
+            className="w-11 h-11 rounded-none object-cover border border-white/10 shrink-0"
           />
         ) : (
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
+          <div className="w-11 h-11 rounded-none bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
             {initial}
           </div>
         )}
@@ -162,7 +162,7 @@ export default function PipelinesTable() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
               tab === t.key ? "bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-200" : "text-slate-400 hover:text-slate-200"
             }`}
           >

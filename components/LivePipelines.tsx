@@ -48,11 +48,11 @@ function PipeCard({ p }: { p: PublicPipeline }) {
   const err = p.lastRunStatus === "error";
   const pending = !p.lastRunStatus;
   return (
-    <div className="shrink-0 rounded-xl border border-pink-400/20 bg-surface-800/60 backdrop-blur p-3 w-full">
+    <div className="shrink-0 rounded-none border border-pink-400/20 bg-surface-800/60 backdrop-blur p-3 w-full">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-xs font-mono text-slate-300">
           <span
-            className={`w-2 h-2 rounded-full ${ok ? "bg-emerald-400" : pending ? "bg-pink-400" : "bg-rose-400"} ${ok || pending ? "animate-pulse" : ""}`}
+            className={`w-2 h-2 rounded-none ${ok ? "bg-emerald-400" : pending ? "bg-pink-400" : "bg-rose-400"} ${ok || pending ? "animate-pulse" : ""}`}
           />
           {p.wallet ?? "—"}
         </span>
@@ -67,7 +67,7 @@ function PipeCard({ p }: { p: PublicPipeline }) {
               href={`https://solscan.io/token/${t}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 font-mono text-[11px] hover:bg-fuchsia-500/25 transition"
+              className="px-1.5 py-0.5 rounded-none bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 font-mono text-[11px] hover:bg-fuchsia-500/25 transition"
             >
               {shortMint(t)}
             </a>
@@ -79,12 +79,12 @@ function PipeCard({ p }: { p: PublicPipeline }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {p.source === "creator-rewards" && (
-          <span className="px-1.5 py-0.5 rounded-md bg-pink-500/10 border border-pink-400/25 text-pink-300 text-[10px]">
+          <span className="px-1.5 py-0.5 rounded-none bg-pink-500/10 border border-pink-400/25 text-pink-300 text-[10px]">
             collected SOL
           </span>
         )}
         {p.rules.map((r, i) => (
-          <span key={i} className="px-1.5 py-0.5 rounded-md bg-surface-900/70 border border-slate-700/40 text-slate-300 text-[10px]">
+          <span key={i} className="px-1.5 py-0.5 rounded-none bg-surface-900/70 border border-slate-700/40 text-slate-300 text-[10px]">
             {ACTION_ICON[r.type] ?? "•"} {r.type === "distribute" ? "ATA growth" : r.type} {r.pct}%
           </span>
         ))}
@@ -92,7 +92,7 @@ function PipeCard({ p }: { p: PublicPipeline }) {
       </div>
 
       {err && p.lastRunSummary && (
-        <div className="mt-2 px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-300 font-mono truncate" title={p.lastRunSummary}>
+        <div className="mt-2 px-2 py-1 rounded-none bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-300 font-mono truncate" title={p.lastRunSummary}>
           {p.lastRunSummary.length > 60 ? p.lastRunSummary.slice(0, 60) + "…" : p.lastRunSummary}
         </div>
       )}
@@ -134,7 +134,7 @@ export default function LivePipelines({ horizontal = false }: { horizontal?: boo
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-pink-300 tracking-wide">Live Pipes</h3>
         <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-none bg-emerald-400 animate-pulse" />
           {pipes.length} running
         </span>
       </div>

@@ -157,29 +157,29 @@ function TokenDetails() {
             </button>
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
             🚀 Not launched yet
           </span>
         )}
       </div>
       <div className="flex flex-wrap gap-2 pt-1">
         {hasMint && (
-          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
+          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-none bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
             Pump.fun ↗
           </a>
         )}
         {hasMint && (
-          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
             Solscan ↗
           </a>
         )}
         {STIMMY.x && (
-          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
             𝕏 ↗
           </a>
         )}
         {STIMMY.telegram && (
-          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
             Telegram ↗
           </a>
         )}
@@ -311,31 +311,31 @@ export default function Home() {
               <span className="text-lg font-bold text-white tracking-tight hidden sm:block">wen stimmy</span>
             </a>
             <nav className="flex items-center gap-1 text-sm">
-              <a href="#pipes" className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">pipes</a>
-              <a href="#create" className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">create</a>
-              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">token</button>
+              <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">pipes</a>
+              <a href="#create" className="px-2.5 py-1.5 rounded-none text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">create</a>
+              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-slate-300 hover:text-white hover:bg-white/[0.04] transition-colors">token</button>
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
                 𝕏
               </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
                 <PumpIcon className="w-5 h-5" />
               </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-white/[0.04] hover:bg-surface-600 transition-colors">
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
-            <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #ec4899)", borderRadius: "0.75rem", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
+            <WalletMultiButton style={{ background: connected ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #a21caf, #ec4899)", borderRadius: "0", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
             {connected && (signedIn ? (
-              <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> SIWS ✓
+              <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all">
+                <span className="w-2 h-2 rounded-none bg-emerald-400 animate-pulse" /> SIWS ✓
               </button>
             ) : (
-              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-pink-500/15 border border-pink-400/30 text-pink-300 text-xs font-medium hover:bg-pink-500/25 transition-all disabled:opacity-50">
+              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-pink-500/15 border border-pink-400/30 text-pink-300 text-xs font-medium hover:bg-pink-500/25 transition-all disabled:opacity-50">
                 {signing ? "Signing…" : "Sign In With Solana"}
               </button>
             ))}
@@ -351,7 +351,7 @@ export default function Home() {
       <aside
         className={`fixed top-0 left-0 z-[70] h-full w-80 max-w-[85vw] transform transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="h-full glass-card rounded-none rounded-r-2xl overflow-y-auto p-5 space-y-5">
+        <div className="h-full glass-card rounded-none rounded-none overflow-y-auto p-5 space-y-5">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2.5">
               <Logo className="w-8 h-8" />
@@ -369,23 +369,24 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* Ticker strip */}
-      <div className="pt-[68px] border-b border-white/[0.05] bg-surface-900/60 overflow-hidden">
-        <div className="flex whitespace-nowrap animate-[ticker_28s_linear_infinite] py-2.5">
-          {[...Array(2)].flatMap((_, dup) =>
-            [
-              "📣 Airdrop up to 245 accounts for 0.5 SOL",
-              "🔥 Buy back & burn — the classic pump.fun didn't give you",
-              "🎁 Reward your own holders automatically",
-              "⚡ Permissionless collection · non-custodial",
-              "◎ Runs on Pump.fun creator fees you already earn",
-            ].map((t, i) => (
-              <span key={`${dup}-${i}`} className="inline-flex items-center gap-2 px-6 text-xs font-mono text-slate-400">
-                {t}<span className="text-slate-700">•</span>
-              </span>
-            ))
-          )}
-        </div>
+      {/* Clickable $STIMMY marquee — opens the token sidebar */}
+      <div className="pt-[68px]">
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          title="Click for token info"
+          className="w-full block border-y border-pink-500/40 bg-pink-500/15 hover:bg-pink-500/25 overflow-hidden cursor-pointer transition-colors"
+        >
+          <div className="flex whitespace-nowrap animate-[ticker_22s_linear_infinite] py-2">
+            {[...Array(4)].flatMap((_, dup) =>
+              ["$STIMMY", "ON PUMP.FUN", "$STIMMY", "CLICK HERE FOR INFO"].map((t, i) => (
+                <span key={`${dup}-${i}`} className="inline-flex items-center gap-4 px-4 text-xs font-bold tracking-[0.15em] text-pink-200">
+                  {t}<span className="text-pink-500/60">—</span>
+                </span>
+              ))
+            )}
+          </div>
+        </button>
       </div>
 
       {/* Hero */}
@@ -395,7 +396,7 @@ export default function Home() {
           <span className="italic bg-gradient-to-r from-fuchsia-400 via-pink-400 to-pink-300 bg-clip-text text-transparent">anyone</span>{" "}
           with pump.fun creator fees.
         </h1>
-        <div className="mt-6 max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/[0.06] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.7)]">
+        <div className="mt-6 max-w-2xl mx-auto rounded-none overflow-hidden border border-white/[0.06] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.7)]">
           <video
             src="/banner.webm"
             autoPlay
@@ -457,7 +458,7 @@ export default function Home() {
 
                   <div className="space-y-3">
                     {rules.map((rule, i) => (
-                      <div key={i} className="rounded-xl border border-white/[0.05] bg-surface-900/60 p-3 space-y-3">
+                      <div key={i} className="rounded-none border border-white/[0.05] bg-surface-900/60 p-3 space-y-3">
                         <div className="flex items-center gap-2">
                           <select
                             className="glass-input text-sm !py-2 flex-1"
@@ -527,7 +528,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={addRule}
-                    className="mt-3 w-full py-2 rounded-xl border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-pink-400/40 hover:text-pink-300 transition-colors"
+                    className="mt-3 w-full py-2 rounded-none border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-pink-400/40 hover:text-pink-300 transition-colors"
                   >
                     + Add another
                   </button>
@@ -540,7 +541,7 @@ export default function Home() {
                 {/* Timing */}
                 <div>
                   <label className="block text-sm font-semibold text-white mb-2">Timing</label>
-                  <div className="rounded-xl bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
+                  <div className="rounded-none bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
                     Runs continuously — it checks for collectible creator fees every cycle and fires a round as soon as the
                     drop threshold below is met. Nothing to schedule.
                   </div>
@@ -561,7 +562,7 @@ export default function Home() {
                   {deploying ? "Creating…" : "⚡ Create pipeline"}
                 </button>
                 {deployResult && !deployResult.ok && (
-                  <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
+                  <div className="p-3 rounded-none bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
                     {deployResult.error || "Create failed"}
                   </div>
                 )}
@@ -590,7 +591,7 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
+                <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
                   <div className="flex justify-between"><span>Timing</span><span className="text-pink-300 font-mono">continuous</span></div>
                   <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
@@ -599,7 +600,7 @@ export default function Home() {
                   {activating ? "Verifying on-chain…" : "✓ I've set it — Activate"}
                 </button>
                 {activateResult && !activateResult.activated && (
-                  <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-300 text-xs">
+                  <div className="p-3 rounded-none bg-amber-500/5 border border-amber-500/20 text-amber-300 text-xs">
                     {activateResult.error
                       ? activateResult.error
                       : activateResult.entitlement?.reason || "This wallet isn't the token's fee receiver yet. Set it on Pump.fun, then try again."}
@@ -616,7 +617,7 @@ export default function Home() {
                 <p className="text-slate-300 text-sm">
                   {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → running continuously
                 </p>
-                <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
+                <div className="p-4 rounded-none bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
                   <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
                   <div className="flex justify-between"><span>Your share</span><span className="text-emerald-300 font-mono">{((activateResult?.entitlement?.shareBps ?? 0) / 100).toFixed(2)}%</span></div>
                   <p className="text-[10px] text-emerald-400 pt-1">It will collect creator fees, wait for the SOL threshold, then increase ATA holder count automatically.</p>
@@ -687,12 +688,12 @@ export default function Home() {
                         const label = t?.symbol ? `$${t.symbol}` : shortMint(m);
                         const initial = (label.replace("$", "")[0] || "?").toUpperCase();
                         return (
-                          <span key={m} className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-surface-900/70 border border-white/[0.05]">
+                          <span key={m} className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-none bg-surface-900/70 border border-white/[0.05]">
                             {t?.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={t.image} alt={label} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
+                              <img src={t.image} alt={label} className="w-5 h-5 rounded-none object-cover border border-white/10 shrink-0" />
                             ) : (
-                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
+                              <span className="w-5 h-5 rounded-none bg-gradient-to-br from-fuchsia-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
                                 {initial}
                               </span>
                             )}
@@ -710,9 +711,9 @@ export default function Home() {
                   <span>Progress:</span>
                   <span className={activated ? "text-emerald-400" : "text-amber-400"}>{activated ? "Live" : canCreate ? "Ready to create" : "Configuring"}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-surface-800 overflow-hidden">
+                <div className="h-1.5 rounded-none bg-surface-800 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-400 transition-all"
+                    className="h-full rounded-none bg-gradient-to-r from-fuchsia-500 to-pink-400 transition-all"
                     style={{
                       width: `${
                         ([mintOk, rulesOk, deployResult?.ok, activated].filter(Boolean).length / 4) * 100
@@ -736,7 +737,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Mainnet
+              <span className="w-1.5 h-1.5 rounded-none bg-emerald-400" /> Mainnet
             </span>
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
