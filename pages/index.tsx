@@ -41,8 +41,8 @@ const RULE_OPTIONS: { type: RuleType; label: string; hint: string }[] = [
 // Holder-reach modes for airdrops — the payout split is always equal, so a lower cap on
 // recipients means a bigger share per holder, and a higher cap means broader reach.
 const HOLDER_MODES: { key: HolderMode; label: string; hint: string }[] = [
-  { key: "bless", label: "Bless", hint: "10% of total per holder" },
-  { key: "here", label: "@Here", hint: "50% of max" },
+  { key: "bless", label: "Bless", hint: "10 lucky holders per distrobution" },
+  { key: "here", label: "@Here", hint: "A thicker spread" },
   { key: "spam", label: "Spam", hint: "Max holders per buy" },
 ];
 
@@ -160,6 +160,13 @@ function shortMint(m: string): string {
   return m.length > 12 ? `${m.slice(0, 5)}…${m.slice(-5)}` : m;
 }
 
+function fmtSol(n: number): string {
+  if (n === 0) return "0";
+  if (n < 0.001) return n.toFixed(6);
+  if (n < 1) return n.toFixed(4);
+  return n.toFixed(3);
+}
+
 interface HudToken {
   symbol?: string;
   image?: string | null;
@@ -196,6 +203,17 @@ function describeRule(r: ValidatedRule, tokenInfo: Record<string, HudToken>): st
     return `${r.pct}% — send SOL directly to ${shortMint(r.targetWallet || "")}`;
   }
   return `${r.pct}% — ${r.type}`;
+}
+
+// Rough per-holder estimate shown under the drop threshold field: assumes the rule's full
+// holder-mode cap gets reached, so a real round may reach fewer holders (and pay each one
+// more) if there aren't that many candidates, or the pool can't cover every recipient's rent.
+function estimateDistributePayout(r: DraftRule, dropThresholdSol: number, tokenInfo: Record<string, HudToken>): string {
+  const cap = HOLDER_MODE_MAX_RECIPIENTS[r.holderMode || "spam"];
+  const ruleSol = dropThresholdSol * (r.pct / 100);
+  const perHolderSol = cap > 0 ? ruleSol / cap : 0;
+  const label = r.targetMint?.trim() ? tokenLabel(r.targetMint.trim(), tokenInfo) : "the airdrop token";
+  return `~${cap} holders × ~${fmtSol(perHolderSol)} SOL worth of ${label} each`;
 }
 
 function TokenDetails() {
@@ -675,6 +693,17 @@ export default function Home() {
                     className="glass-input font-mono text-sm"
                   />
                   <p className="text-xs text-slate-500 mt-1.5">Fees accumulate until spendable SOL passes this, then a round fires.</p>
+                  {rules.filter((r) => r.type === "distribute" && r.pct > 0).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {rules
+                        .filter((r) => r.type === "distribute" && r.pct > 0)
+                        .map((r, i) => (
+                          <p key={i} className="text-[11px] text-pink-300/80 font-mono">
+                            {estimateDistributePayout(r, draft.dropThresholdSol ?? 0.5, tokenInfo)}
+                          </p>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 <button className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
