@@ -25,6 +25,7 @@
     "@tanstack/react-query": "^5.101.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
+    "@vercel/analytics": "^2.0.1",
     "autoprefixer": "^10.5.2",
     "bs58": "^6.0.0",
     "next": "^14.2.35",
