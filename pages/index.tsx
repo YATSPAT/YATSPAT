@@ -65,6 +65,23 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
   );
 }
 
+// Header mark: a coin that keeps flipping between "S" (Stimmy) and "?" (wen?) — a nod to the
+// gambling/pump.fun spirit of the app, distinct from the plain "R" wordmark used elsewhere.
+function CoinLogo({ className = "w-9 h-9" }: { className?: string }) {
+  return (
+    <span className={`coin-spin inline-block shrink-0 ${className}`}>
+      <span className="coin-spin-inner">
+        <span className="coin-face coin-face-front flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-pink-600 text-white font-black text-base leading-none">
+          S
+        </span>
+        <span className="coin-face coin-face-back flex items-center justify-center bg-gradient-to-br from-pink-600 to-fuchsia-500 text-white font-black text-base leading-none">
+          ?
+        </span>
+      </span>
+    </span>
+  );
+}
+
 /* Pump.fun pill icon */
 function PumpIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -402,7 +419,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-nowrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 min-w-0">
             <a href="#top" className="flex items-center gap-2.5 shrink-0">
-              <Logo className="w-9 h-9 shrink-0" />
+              <CoinLogo className="w-9 h-9" />
               <span className="text-lg font-bold text-white tracking-tight hidden sm:block">wen stimmy</span>
             </a>
             <nav className="flex items-center gap-1 text-sm">
