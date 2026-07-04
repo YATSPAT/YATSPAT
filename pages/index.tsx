@@ -379,12 +379,12 @@ export default function Home() {
         >
           <div className="flex whitespace-nowrap animate-[ticker_13s_linear_infinite] py-3">
             {[...Array(6)].flatMap((_, dup) =>
-              ["🚀 $STIMMY", "◎ ON PUMP.FUN", "💊 $STIMMY", "👉 CLICK HERE FOR INFO"].map((t, i) => (
+              ["$STIMMY", "ON PUMP.FUN", "$STIMMY", "CLICK HERE FOR INFO"].map((t, i) => (
                 <span
                   key={`${dup}-${i}`}
-                  className="inline-flex items-center gap-3 px-4 text-sm sm:text-lg font-black uppercase tracking-[0.22em] text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.55)]"
+                  className="inline-flex items-center gap-4 px-4 text-sm sm:text-lg font-black uppercase tracking-[0.22em] text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.55)]"
                 >
-                  {t}<span className="text-black/40 text-xl">✦</span>
+                  {t}<span className="text-black/50 text-xl">✦</span>
                 </span>
               ))
             )}
