@@ -207,6 +207,8 @@ export default function Home() {
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validateResult, setValidateResult] = useState<any>(null);
 
   const rules = draft.rules || [];
   const setRules = (r: DraftRule[]) => setDraft((d) => ({ ...d, rules: r }));
@@ -255,6 +257,12 @@ export default function Home() {
     return () => { alive = false; clearTimeout(t); };
   }, [mintsKey]);
 
+  // Any edit invalidates a prior VALIDATE result — stale "looks good" would be misleading.
+  const rulesKey = JSON.stringify(rules);
+  useEffect(() => {
+    setValidateResult(null);
+  }, [draft.feeMint, rulesKey, draft.dropThresholdSol]);
+
   const deploy = async () => {
     setDeploying(true);
     try {
@@ -281,6 +289,34 @@ export default function Home() {
       setDeployResult({ ok: false, error: err.message });
     } finally {
       setDeploying(false);
+    }
+  };
+
+  const validate = async () => {
+    setValidating(true);
+    setValidateResult(null);
+    try {
+      const res = await fetch("/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feeMint: draft.feeMint?.trim() || "",
+          rules: (draft.rules || []).filter((r) => r.pct > 0).map((r) => ({
+            type: r.type,
+            pct: r.pct,
+            targetMint: (r.targetMint || "").trim(),
+            targetWallet: (r.targetWallet || "").trim(),
+            holderMint: (r.holderMint || "").trim(),
+          })),
+          dropThresholdSol: draft.dropThresholdSol ?? undefined,
+        }),
+      });
+      const data = await res.json();
+      setValidateResult(data);
+    } catch (err: any) {
+      setValidateResult({ ok: false, error: err.message });
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -721,6 +757,40 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-700/40">
+                <button
+                  onClick={validate}
+                  disabled={validating}
+                  className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
+                >
+                  {validating ? "VALIDATING…" : "VALIDATE"}
+                </button>
+                {validateResult && (
+                  <div
+                    className={`mt-2 px-2.5 py-2 border text-[11px] leading-relaxed ${
+                      validateResult.ok
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+                    }`}
+                  >
+                    {validateResult.ok ? (
+                      <>
+                        <p className="font-semibold">Valid — ready to create.</p>
+                        {validateResult.warnings?.length > 0 && (
+                          <ul className="mt-1.5 space-y-1 text-amber-300">
+                            {validateResult.warnings.map((w: string, i: number) => (
+                              <li key={i}>· {w}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    ) : (
+                      <p>{validateResult.error}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-3 border-t border-slate-700/40">
