@@ -561,7 +561,7 @@ export default function Home() {
                       <div key={i} className="rounded-none border border-white/[0.05] bg-surface-900/60 p-3 space-y-3">
                         <div className="flex items-center gap-2">
                           <select
-                            className="glass-input text-sm !py-2 flex-1"
+                            className="glass-input text-sm !py-2 flex-1 !border-pink-400/50 focus:!border-pink-400/80"
                             value={rule.type}
                             onChange={(e) => updateRule(i, { type: e.target.value as RuleType })}
                           >
@@ -653,7 +653,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={addRule}
-                    className="mt-3 w-full py-2 rounded-none border border-dashed border-slate-600/50 text-xs text-slate-400 hover:border-pink-400/40 hover:text-pink-300 transition-colors"
+                    className="mt-3 w-full py-2 rounded-none border border-dashed border-pink-400/50 text-xs text-pink-300 hover:bg-pink-500/10 hover:border-pink-400/80 transition-colors"
                   >
                     + Add another
                   </button>
@@ -663,15 +663,8 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Timing */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">Timing</label>
-                  <div className="rounded-none bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
-                    Checks every 5 minutes to start, then adapts: faster (down to every minute) while fees keep
-                    coming in, slower (up to once an hour) once they dry up. Fires a round as soon as the drop
-                    threshold below is met. Nothing to schedule.
-                  </div>
-                  <label className="block text-xs text-slate-400 mt-4 mb-1.5">SOL drop threshold (optional)</label>
+                  <label className="block text-xs text-slate-400 mb-1.5">SOL drop threshold (optional)</label>
                   <input
                     type="number"
                     min="0"
