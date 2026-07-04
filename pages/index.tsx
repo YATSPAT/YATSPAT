@@ -178,47 +178,47 @@ function TokenDetails() {
   };
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-400 leading-relaxed">{STIMMY.blurb}</p>
+      <p className="text-sm text-slate-400 leading-relaxed">{STIMMY.blurb}</p>
       <div className="flex items-center justify-between">
-        <span className="text-slate-400 text-xs">Ticker</span>
-        <span className="text-white font-mono text-xs">{STIMMY.ticker}</span>
+        <span className="text-slate-400 text-sm">Ticker</span>
+        <span className="text-white font-mono text-sm">{STIMMY.ticker}</span>
       </div>
       <div>
-        <span className="text-slate-400 text-xs block mb-1">Contract</span>
+        <span className="text-slate-400 text-sm block mb-1">Contract</span>
         {hasMint ? (
           <div className="flex gap-2">
-            <code className="dazzle-contract glass-input font-mono text-[11px] flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
+            <code className="dazzle-contract glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
             <button
-              className={`dazzle-copy btn-secondary text-xs shrink-0 py-1.5 px-3 ${copied ? "dazzle-copied" : ""}`}
+              className={`dazzle-copy btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "dazzle-copied" : ""}`}
               onClick={doCopy}
             >
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-xs font-medium">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none bg-fuchsia-500/10 border border-fuchsia-400/25 text-fuchsia-200 text-sm font-medium">
             Not launched yet
           </span>
         )}
       </div>
       <div className="flex flex-wrap gap-2 pt-1">
         {hasMint && (
-          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-xs hover:bg-fuchsia-500/25 transition">
+          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-fuchsia-500/15 border border-fuchsia-400/30 text-fuchsia-200 text-sm hover:bg-fuchsia-500/25 transition">
             Pump.fun ↗
           </a>
         )}
         {hasMint && (
-          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-sm hover:border-slate-500/60 transition">
             Solscan ↗
           </a>
         )}
         {STIMMY.x && (
-          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-sm hover:border-slate-500/60 transition">
             𝕏 ↗
           </a>
         )}
         {STIMMY.telegram && (
-          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-xs hover:border-slate-500/60 transition">
+          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-slate-700/50 text-slate-300 text-sm hover:border-slate-500/60 transition">
             Telegram ↗
           </a>
         )}
@@ -434,7 +434,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2.5">
               <Logo className="w-8 h-8" />
-              <span className="text-base font-bold text-white">Wen Stimmy</span>
+              <span className="text-lg font-bold text-white">Wen Stimmy</span>
             </span>
             <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="dazzle-close">
               <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
@@ -444,7 +444,7 @@ export default function Home() {
           <div className="sidebar-accent-bar -mx-5" />
 
           <div>
-            <h4 className="sidebar-heading-dazzle flex items-center text-[11px] font-bold uppercase tracking-wider text-pink-300 mb-2.5">
+            <h4 className="sidebar-heading-dazzle flex items-center text-xs font-bold uppercase tracking-wider text-pink-300 mb-2.5">
               <span className="sidebar-label-tick" />
               Our token
             </h4>
