@@ -3,7 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import PipelinesTable from "../components/PipelinesTable";
-import { formatInterval, SCHEDULE_PRESETS } from "../lib/schedule";
+import { formatInterval } from "../lib/schedule";
 
 type RuleType = "burn" | "buy-burn" | "distribute" | "send";
 
@@ -201,8 +201,16 @@ export default function Home() {
   const updateRule = (i: number, patch: Partial<DraftRule>) =>
     setRules(rules.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
+  // A rule is only usable once its type-specific target fields are filled — otherwise
+  // it deploys fine but dies on the first run (e.g. "distribute requires targetMint").
+  const ruleComplete = (r: DraftRule): boolean => {
+    if (r.type === "distribute") return !!r.holderMint?.trim() && !!r.targetMint?.trim();
+    if (r.type === "buy-burn") return !!r.targetMint?.trim();
+    if (r.type === "send") return !!r.targetWallet?.trim();
+    return true; // burn needs no target
+  };
   const total = rulesTotal(rules);
-  const rulesOk = rules.length > 0 && total === 100;
+  const rulesOk = rules.length > 0 && total === 100 && rules.every(ruleComplete);
   const mintOk = !!draft.feeMint?.trim();
   const canCreate = mintOk && rulesOk;
   const activated = activateResult?.activated === true;
@@ -493,26 +501,17 @@ export default function Home() {
                     + Add another
                   </button>
                   {total !== 100 && <p className="text-xs text-amber-400 mt-2">Percentages must add up to 100%.</p>}
+                  {total === 100 && !rules.every(ruleComplete) && (
+                    <p className="text-xs text-amber-400 mt-2">Fill in the token / wallet fields on each rule.</p>
+                  )}
                 </div>
 
-                {/* Schedule */}
+                {/* Timing */}
                 <div>
-                  <label className="block text-sm font-semibold text-white mb-2">How often to check</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {SCHEDULE_PRESETS.map((p) => (
-                      <button
-                        type="button"
-                        key={p.minutes}
-                        onClick={() => setDraft((d) => ({ ...d, intervalMinutes: p.minutes }))}
-                        className={`px-2 py-2 rounded-lg text-xs font-mono transition-all ${
-                          (draft.intervalMinutes || 60) === p.minutes
-                            ? "bg-fuchsia-500/20 border border-fuchsia-400/40 text-fuchsia-200"
-                            : "bg-surface-900/60 border border-slate-700/40 text-slate-300 hover:border-slate-500/50"
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                  <label className="block text-sm font-semibold text-white mb-2">Timing</label>
+                  <div className="rounded-xl bg-surface-900/60 border border-slate-700/40 px-3 py-2.5 text-xs text-slate-400 leading-relaxed">
+                    Runs continuously — it checks for collectible creator fees every cycle and fires a round as soon as the
+                    drop threshold below is met. Nothing to schedule.
                   </div>
                   <label className="block text-xs text-slate-400 mt-4 mb-1.5">SOL drop threshold (optional)</label>
                   <input
@@ -562,7 +561,7 @@ export default function Home() {
                 </div>
                 <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-white font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
-                  <div className="flex justify-between"><span>Schedule</span><span className="text-cyan-300 font-mono">every {formatInterval(draft.intervalMinutes || 60)}</span></div>
+                  <div className="flex justify-between"><span>Timing</span><span className="text-cyan-300 font-mono">continuous</span></div>
                   <div className="flex justify-between"><span>Status</span><span className="text-amber-400">Paused — awaiting fee-receiver setup</span></div>
                 </div>
                 <button className="btn-deploy w-full" onClick={activate} disabled={activating}>
@@ -584,7 +583,7 @@ export default function Home() {
                 <div className="text-5xl">✅</div>
                 <h2 className="text-2xl font-bold text-white">Pipeline Live</h2>
                 <p className="text-slate-300 text-sm">
-                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → check every {formatInterval(draft.intervalMinutes || 60)}
+                  {(draft.rules || []).filter((r) => r.pct > 0).length} rule{(draft.rules || []).filter((r) => r.pct > 0).length === 1 ? "" : "s"} → running continuously
                 </p>
                 <div className="p-4 rounded-xl bg-surface-800/60 border border-slate-700/30 text-xs text-slate-300 text-left space-y-2">
                   <div className="flex justify-between"><span>Job ID</span><span className="text-white font-mono">{deployResult.id?.slice(0, 8)}…</span></div>
@@ -637,8 +636,8 @@ export default function Home() {
 
                 <div className="pt-2 border-t border-slate-700/40">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Check interval</span>
-                    <span className="text-white font-mono">{draft.intervalMinutes ? formatInterval(draft.intervalMinutes) : "default (1h)"}</span>
+                    <span className="text-slate-400">Timing</span>
+                    <span className="text-white font-mono">continuous</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-slate-400">Drop threshold</span>

@@ -48,6 +48,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const totalPct = cleanRules.reduce((s, r) => s + r.pct, 0);
   if (totalPct !== 100) return res.status(400).json({ error: `rules must total 100% (got ${totalPct}%)` });
 
+  // Each rule needs its type-specific target fields, or it would deploy and then fail on
+  // the first run ("distribute requires targetMint"). Validate up front, including that
+  // the referenced mints/wallets are real Solana addresses.
+  for (let i = 0; i < cleanRules.length; i++) {
+    const r = cleanRules[i];
+    const need = (field: string, val: string) => {
+      if (!val) throw new Error(`rule ${i + 1} (${r.type}) requires ${field}`);
+      if (!isValidPubkey(val)) throw new Error(`rule ${i + 1} (${r.type}): ${field} is not a valid Solana address`);
+    };
+    try {
+      if (r.type === "distribute") {
+        need("holderMint", r.holderMint);
+        need("targetMint", r.targetMint);
+      } else if (r.type === "buy-burn") {
+        need("targetMint", r.targetMint);
+      } else if (r.type === "send") {
+        need("targetWallet", r.targetWallet);
+      }
+    } catch (e: any) {
+      return res.status(400).json({ error: e.message });
+    }
+  }
+
   // Spendable SOL required before a distribution round fires. Omit/blank to use the platform default.
   let dropThresholdLamports: number | null = null;
   if (dropThresholdSol !== undefined && dropThresholdSol !== null && dropThresholdSol !== "") {
