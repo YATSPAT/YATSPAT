@@ -138,6 +138,36 @@ interface HudToken {
   image?: string | null;
 }
 
+// The exact rule shape /api/validate echoes back — normalized/trimmed, matching what
+// /api/deploy would persist verbatim.
+interface ValidatedRule {
+  type: RuleType;
+  pct: number;
+  targetMint?: string;
+  targetWallet?: string;
+  holderMint?: string;
+}
+
+function tokenLabel(mint: string, tokenInfo: Record<string, HudToken>): string {
+  const sym = tokenInfo[mint]?.symbol;
+  return sym ? `$${sym}` : shortMint(mint);
+}
+
+// Plain-English recap of exactly what a rule will do at runtime — this is what gets shown
+// as "the exact workflow that will be generated" before the user commits to creating it.
+function describeRule(r: ValidatedRule, tokenInfo: Record<string, HudToken>): string {
+  if (r.type === "distribute") {
+    return `${r.pct}% — swap into ${tokenLabel(r.targetMint || "", tokenInfo)} and airdrop it to every holder of ${tokenLabel(r.holderMint || "", tokenInfo)}`;
+  }
+  if (r.type === "buy-burn") {
+    return `${r.pct}% — swap into ${tokenLabel(r.targetMint || "", tokenInfo)} and burn it forever`;
+  }
+  if (r.type === "send") {
+    return `${r.pct}% — send SOL directly to ${shortMint(r.targetWallet || "")}`;
+  }
+  return `${r.pct}% — ${r.type}`;
+}
+
 function TokenDetails() {
   const hasMint = STIMMY.mint.trim().length > 0;
   const [copied, setCopied] = useState(false);
@@ -228,7 +258,11 @@ export default function Home() {
   const total = rulesTotal(rules);
   const rulesOk = rules.length > 0 && total === 100 && rules.every(ruleComplete);
   const mintOk = !!draft.feeMint?.trim();
-  const canCreate = mintOk && rulesOk;
+  // Pressing VALIDATE is mandatory, not just advisory — creation is permanent (no edit
+  // endpoint exists once a pipeline is live), so the button stays locked until the exact
+  // workflow has been reviewed and confirmed valid for the current draft.
+  const validated = validateResult?.ok === true;
+  const canCreate = mintOk && rulesOk && validated;
   const activated = activateResult?.activated === true;
 
   // Every distinct token mint the form references — resolved live for the HUD.
@@ -614,6 +648,11 @@ export default function Home() {
                 <button className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
                   {deploying ? "Creating…" : "⚡ Create pipeline"}
                 </button>
+                {mintOk && rulesOk && !validated && (
+                  <p className="text-xs text-pink-300 -mt-3">
+                    Press VALIDATE in the Configuration HUD to review the exact workflow and unlock this.
+                  </p>
+                )}
                 {deployResult && !deployResult.ok && (
                   <div className="p-3 rounded-none bg-rose-500/5 border border-rose-500/20 text-rose-300 text-xs">
                     {deployResult.error || "Create failed"}
@@ -777,7 +816,19 @@ export default function Home() {
                   >
                     {validateResult.ok ? (
                       <>
-                        <p className="font-semibold">Valid — ready to create.</p>
+                        <p className="font-semibold">This pipeline will:</p>
+                        <ul className="mt-1.5 space-y-1 text-slate-200">
+                          <li>· Collect Pump.fun creator fees from {tokenLabel(validateResult.feeMint, tokenInfo)} as SOL</li>
+                          <li>
+                            · Once spendable SOL passes{" "}
+                            {((validateResult.dropThresholdLamports ?? 500_000_000) / 1e9).toString()} SOL, split it:
+                          </li>
+                        </ul>
+                        <ul className="mt-1 ml-3 space-y-1 text-emerald-200">
+                          {(validateResult.rules as ValidatedRule[]).map((r, i) => (
+                            <li key={i}>· {describeRule(r, tokenInfo)}</li>
+                          ))}
+                        </ul>
                         {validateResult.warnings?.length > 0 && (
                           <ul className="mt-1.5 space-y-1 text-amber-300">
                             {validateResult.warnings.map((w: string, i: number) => (
@@ -785,6 +836,10 @@ export default function Home() {
                             ))}
                           </ul>
                         )}
+                        <p className="mt-2 pt-2 border-t border-emerald-500/20 text-emerald-100/80 font-medium">
+                          This is permanent once created — there is no edit screen. Re-check the workflow above before
+                          continuing.
+                        </p>
                       </>
                     ) : (
                       <p>{validateResult.error}</p>

@@ -32,5 +32,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Best-effort only — a Helius hiccup shouldn't block validation.
   }
 
-  return res.status(200).json({ ok: true, warnings });
+  // Echo back the exact normalized shape /api/deploy would persist, so the client can render
+  // the precise workflow that pressing "Create pipeline" is about to lock in.
+  return res.status(200).json({
+    ok: true,
+    warnings,
+    feeMint: mint,
+    rules: cleanRules,
+    dropThresholdLamports: validated.value.dropThresholdLamports,
+  });
 }
