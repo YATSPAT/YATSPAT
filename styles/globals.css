@@ -71,6 +71,18 @@
   to { transform: translateX(-50%); }
 }
 
+/* BOMBASTIC ticker: moving gradient sheen + pulsing pink glow */
+.marquee-bombast {
+  animation: marquee-shine 2.5s linear infinite, marquee-glow 1.6s ease-in-out infinite;
+}
+@keyframes marquee-shine {
+  to { background-position: 200% 0; }
+}
+@keyframes marquee-glow {
+  0%, 100% { box-shadow: 0 0 18px -4px rgba(236, 72, 153, 0.55), inset 0 0 24px -12px rgba(255, 255, 255, 0.4); }
+  50% { box-shadow: 0 0 34px 0px rgba(236, 72, 153, 0.95), inset 0 0 24px -12px rgba(255, 255, 255, 0.6); }
+}
+
 /* Custom range slider */
 input[type="range"] {
   -webkit-appearance: none;

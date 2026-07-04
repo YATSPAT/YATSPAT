@@ -375,13 +375,16 @@ export default function Home() {
           type="button"
           onClick={() => setMenuOpen(true)}
           title="Click for token info"
-          className="w-full block border-y border-pink-500/40 bg-pink-500/15 hover:bg-pink-500/25 overflow-hidden cursor-pointer transition-colors"
+          className="marquee-bombast w-full block overflow-hidden cursor-pointer border-y-2 border-pink-300 bg-gradient-to-r from-pink-600 via-fuchsia-400 to-pink-600 bg-[length:200%_100%] hover:brightness-110 transition"
         >
-          <div className="flex whitespace-nowrap animate-[ticker_22s_linear_infinite] py-2">
-            {[...Array(4)].flatMap((_, dup) =>
-              ["$STIMMY", "ON PUMP.FUN", "$STIMMY", "CLICK HERE FOR INFO"].map((t, i) => (
-                <span key={`${dup}-${i}`} className="inline-flex items-center gap-4 px-4 text-xs font-bold tracking-[0.15em] text-pink-200">
-                  {t}<span className="text-pink-500/60">—</span>
+          <div className="flex whitespace-nowrap animate-[ticker_13s_linear_infinite] py-3">
+            {[...Array(6)].flatMap((_, dup) =>
+              ["🚀 $STIMMY", "◎ ON PUMP.FUN", "💊 $STIMMY", "👉 CLICK HERE FOR INFO"].map((t, i) => (
+                <span
+                  key={`${dup}-${i}`}
+                  className="inline-flex items-center gap-3 px-4 text-sm sm:text-lg font-black uppercase tracking-[0.22em] text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.55)]"
+                >
+                  {t}<span className="text-black/40 text-xl">✦</span>
                 </span>
               ))
             )}
