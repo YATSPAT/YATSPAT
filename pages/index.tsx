@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
@@ -133,6 +133,21 @@ function shortMint(m: string): string {
   return m.length > 12 ? `${m.slice(0, 5)}…${m.slice(-5)}` : m;
 }
 
+function fmtUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(2)}`;
+}
+
+interface HudToken {
+  name?: string;
+  symbol?: string;
+  image?: string | null;
+  marketCapUsd?: number | null;
+  priceUsd?: number | null;
+}
+
 function TokenDetails() {
   const hasMint = STIMMY.mint.trim().length > 0;
   return (
@@ -214,6 +229,32 @@ export default function Home() {
   const mintOk = !!draft.feeMint?.trim();
   const canCreate = mintOk && rulesOk;
   const activated = activateResult?.activated === true;
+
+  // Every distinct token mint the form references — resolved live for the HUD.
+  const referencedMints = useMemo(() => {
+    const s = new Set<string>();
+    const add = (m?: string) => { const t = (m || "").trim(); if (t) s.add(t); };
+    add(draft.feeMint);
+    for (const r of rules) { add(r.holderMint); add(r.targetMint); }
+    return Array.from(s);
+  }, [draft.feeMint, rules]);
+
+  const [tokenInfo, setTokenInfo] = useState<Record<string, HudToken>>({});
+  const mintsKey = referencedMints.join(",");
+  useEffect(() => {
+    if (!mintsKey) { setTokenInfo({}); return; }
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/token-info?mints=${encodeURIComponent(mintsKey)}`);
+        const data = await res.json();
+        if (alive && data.ok) setTokenInfo(data.tokens || {});
+      } catch {
+        /* keep last known */
+      }
+    }, 450);
+    return () => { alive = false; clearTimeout(t); };
+  }, [mintsKey]);
 
   const deploy = async () => {
     setDeploying(true);
@@ -643,6 +684,40 @@ export default function Home() {
                     <span className="text-slate-400">Drop threshold</span>
                     <span className="text-white font-mono">{draft.dropThresholdSol ?? "0.5"} SOL</span>
                   </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-700/40">
+                  <div className="text-slate-400 mb-2">Tokens (on-chain)</div>
+                  {referencedMints.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">Enter a token to see live data.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {referencedMints.map((m) => {
+                        const t = tokenInfo[m];
+                        const name = t?.name || shortMint(m);
+                        const initial = (name.trim()[0] || "?").toUpperCase();
+                        return (
+                          <div key={m} className="flex items-center gap-2">
+                            {t?.image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={t.image} alt={name} className="w-6 h-6 rounded-full object-cover border border-white/10 shrink-0" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                                {initial}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1 leading-tight">
+                              <div className="text-[11px] text-white truncate">{name}</div>
+                              {t?.symbol ? <div className="text-[10px] text-cyan-300">${t.symbol}</div> : null}
+                            </div>
+                            {t?.marketCapUsd != null ? (
+                              <span className="text-[10px] font-mono text-slate-300 shrink-0" title="market cap">{fmtUsd(t.marketCapUsd)}</span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
