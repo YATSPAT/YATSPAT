@@ -4,6 +4,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import PipelinesTable from "../components/PipelinesTable";
 import LiveStatsStrip from "../components/LiveStatsStrip";
+import FirstTimeTutorial from "../components/FirstTimeTutorial";
 import { HOLDER_MODE_MAX_RECIPIENTS } from "../lib/lotteryDistribution";
 import type { HolderMode } from "../lib/lotteryDistribution";
 
@@ -47,6 +48,8 @@ const HOLDER_MODES: { key: HolderMode; label: string; hint: string }[] = [
 ];
 
 const newRule = (): DraftRule => ({ type: "distribute", pct: 0, targetMint: "", targetWallet: "", holderMint: "", holderMode: "spam" });
+
+const TUTORIAL_SEEN_KEY = "wenstimmy_tutorial_seen_v1";
 
 function Logo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -287,6 +290,25 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validateResult, setValidateResult] = useState<any>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // First-run walkthrough — shows once automatically, then only via the header's "?" button.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(TUTORIAL_SEEN_KEY)) setShowTutorial(true);
+    } catch {
+      /* localStorage unavailable (private browsing etc.) — just skip auto-show */
+    }
+  }, []);
+
+  const closeTutorial = () => {
+    setShowTutorial(false);
+    try {
+      localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+    } catch {
+      /* nothing to persist — it'll just show again next visit */
+    }
+  };
 
   const rules = draft.rules || [];
   const setRules = (r: DraftRule[]) => setDraft((d) => ({ ...d, rules: r }));
@@ -445,6 +467,14 @@ export default function Home() {
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button
+              onClick={() => setShowTutorial(true)}
+              title="How this works"
+              aria-label="Open tutorial"
+              className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-white/[0.04] text-slate-200 text-sm font-bold hover:text-pink-300 hover:border-pink-400/30 transition-colors shrink-0"
+            >
+              ?
+            </button>
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
               <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-white/[0.04] text-slate-200 text-sm hover:text-white transition-colors">
@@ -501,6 +531,8 @@ export default function Home() {
           </div>
         </div>
       </aside>
+
+      <FirstTimeTutorial open={showTutorial} onClose={closeTutorial} />
 
       {/* Live stats strip — real platform numbers instead of a promo ticker */}
       <div className="pt-[68px]">
