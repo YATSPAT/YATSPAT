@@ -41,7 +41,7 @@ const RULE_OPTIONS: { type: RuleType; label: string; hint: string }[] = [
 // Holder-reach modes for airdrops — the payout split is always equal, so a lower cap on
 // recipients means a bigger share per holder, and a higher cap means broader reach.
 const HOLDER_MODES: { key: HolderMode; label: string; hint: string }[] = [
-  { key: "bless", label: "Bless", hint: "10 lucky holders per distrobution" },
+  { key: "bless", label: "Bless", hint: "10 lucky holders per distribution" },
   { key: "here", label: "@Here", hint: "A thicker spread" },
   { key: "spam", label: "Spam", hint: "Max holders per buy" },
 ];
