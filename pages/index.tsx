@@ -3,6 +3,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
 import PipelinesTable from "../components/PipelinesTable";
+import LiveStatsStrip from "../components/LiveStatsStrip";
 import { formatInterval } from "../lib/schedule";
 import { HOLDER_MODE_MAX_RECIPIENTS } from "../lib/lotteryDistribution";
 import type { HolderMode } from "../lib/lotteryDistribution";
@@ -486,27 +487,9 @@ export default function Home() {
         </div>
       </aside>
 
-      {/* Clickable $STIMMY marquee — opens the token sidebar */}
+      {/* Live stats strip — real platform numbers instead of a promo ticker */}
       <div className="pt-[68px]">
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          title="Click for token info"
-          className="marquee-bombast w-full block overflow-hidden cursor-pointer border-y-2 border-pink-300 bg-gradient-to-r from-pink-600 via-fuchsia-400 to-pink-600 bg-[length:200%_100%] hover:brightness-110 transition"
-        >
-          <div className="flex whitespace-nowrap animate-[ticker_13s_linear_infinite] py-5">
-            {[...Array(6)].flatMap((_, dup) =>
-              ["$STIMMY", "ON PUMP.FUN", "$STIMMY", "CLICK HERE FOR INFO"].map((t, i) => (
-                <span
-                  key={`${dup}-${i}`}
-                  className="inline-flex items-center gap-4 px-4 text-sm sm:text-lg font-black uppercase tracking-[0.22em] text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.55)]"
-                >
-                  {t}<span className="text-black/50 text-xl">✦</span>
-                </span>
-              ))
-            )}
-          </div>
-        </button>
+        <LiveStatsStrip />
       </div>
 
       {/* Hero */}
