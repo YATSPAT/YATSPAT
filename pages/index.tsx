@@ -133,19 +133,9 @@ function shortMint(m: string): string {
   return m.length > 12 ? `${m.slice(0, 5)}…${m.slice(-5)}` : m;
 }
 
-function fmtUsd(n: number): string {
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
-  return `$${n.toFixed(2)}`;
-}
-
 interface HudToken {
-  name?: string;
   symbol?: string;
   image?: string | null;
-  marketCapUsd?: number | null;
-  priceUsd?: number | null;
 }
 
 function TokenDetails() {
@@ -691,29 +681,23 @@ export default function Home() {
                   {referencedMints.length === 0 ? (
                     <p className="text-[11px] text-slate-500">Enter a token to see live data.</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                       {referencedMints.map((m) => {
                         const t = tokenInfo[m];
-                        const name = t?.name || shortMint(m);
-                        const initial = (name.trim()[0] || "?").toUpperCase();
+                        const label = t?.symbol ? `$${t.symbol}` : shortMint(m);
+                        const initial = (label.replace("$", "")[0] || "?").toUpperCase();
                         return (
-                          <div key={m} className="flex items-center gap-2">
+                          <span key={m} className="inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-surface-900/70 border border-white/[0.05]">
                             {t?.image ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={t.image} alt={name} className="w-6 h-6 rounded-full object-cover border border-white/10 shrink-0" />
+                              <img src={t.image} alt={label} className="w-5 h-5 rounded-full object-cover border border-white/10 shrink-0" />
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-cyan-500/30 border border-white/10 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
                                 {initial}
-                              </div>
+                              </span>
                             )}
-                            <div className="min-w-0 flex-1 leading-tight">
-                              <div className="text-[11px] text-white truncate">{name}</div>
-                              {t?.symbol ? <div className="text-[10px] text-cyan-300">${t.symbol}</div> : null}
-                            </div>
-                            {t?.marketCapUsd != null ? (
-                              <span className="text-[10px] font-mono text-slate-300 shrink-0" title="market cap">{fmtUsd(t.marketCapUsd)}</span>
-                            ) : null}
-                          </div>
+                            <span className="text-[11px] text-white truncate max-w-[110px]">{label}</span>
+                          </span>
                         );
                       })}
                     </div>
