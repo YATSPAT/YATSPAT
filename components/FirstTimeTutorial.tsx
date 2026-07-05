@@ -68,17 +68,27 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
   const [cardHeight, setCardHeight] = useState(FALLBACK_CARD_HEIGHT);
 
   const measure = useCallback(() => {
-    const el = document.querySelector(STEPS[step].selector);
-    if (!el) {
+    const el = document.querySelector(STEPS[step].selector) as HTMLElement | null;
+    // querySelector still matches elements hidden via `display: none` (e.g. the Configuration
+    // HUD below Tailwind's lg breakpoint) — those report a degenerate 0x0 rect at (0,0), which
+    // would otherwise look like a "valid" hole in the corner instead of falling back cleanly.
+    const isHidden = !el || (el.offsetWidth === 0 && el.offsetHeight === 0);
+    if (!el || isHidden) {
       setHole(null);
       return;
     }
     const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Clamp every edge to BOTH ends of its axis, not just one — mid-scroll (before
+    // scrollIntoView finishes) the target can sit far outside the viewport, and a one-sided
+    // clamp lets top/left run arbitrarily large, producing a hole taller than the viewport
+    // itself and a wildly out-of-bounds tooltip position.
     setHole({
-      top: Math.max(0, r.top - HOLE_PAD),
-      left: Math.max(0, r.left - HOLE_PAD),
-      right: Math.min(window.innerWidth, r.right + HOLE_PAD),
-      bottom: Math.min(window.innerHeight, r.bottom + HOLE_PAD),
+      top: Math.min(vh, Math.max(0, r.top - HOLE_PAD)),
+      left: Math.min(vw, Math.max(0, r.left - HOLE_PAD)),
+      right: Math.max(0, Math.min(vw, r.right + HOLE_PAD)),
+      bottom: Math.max(0, Math.min(vh, r.bottom + HOLE_PAD)),
     });
   }, [step]);
 
