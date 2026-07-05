@@ -984,6 +984,18 @@ export default function Home() {
             </a>
           </div>
         </div>
+        <div className="max-w-6xl mx-auto px-4 pb-6 text-center text-[11px] text-brand-800">
+          YATSPAT is the whitelabel core.{" "}
+          <a
+            href="https://wenstimmy.fun"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-700 hover:text-brand-400 transition-colors"
+          >
+            wenstimmy.fun
+          </a>{" "}
+          runs the branded version of this repo.
+        </div>
       </footer>
     </main>
   );
