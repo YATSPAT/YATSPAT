@@ -974,6 +974,14 @@ export default function Home() {
             </span>
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
+            <a
+              href="https://wenstimmy.fun/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-600 hover:text-brand-400 transition-colors"
+            >
+              &gt; Docs
+            </a>
           </div>
         </div>
       </footer>
