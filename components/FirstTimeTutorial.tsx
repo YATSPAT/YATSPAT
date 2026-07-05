@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface TourStep {
   selector: string;
@@ -45,8 +45,10 @@ const STEPS: TourStep[] = [
 ];
 
 const HOLE_PAD = 8;
-const MIN_TOOLTIP_SPACE = 170;
+const GAP = 16; // space between the cutout and the tooltip
+const MARGIN = 16; // minimum space kept between the tooltip and the viewport edge
 const TOOLTIP_W = 340;
+const FALLBACK_CARD_HEIGHT = 260; // best guess before the card's real height is measured
 
 interface Hole {
   top: number;
@@ -62,6 +64,8 @@ interface Hole {
 export default function FirstTimeTutorial({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [hole, setHole] = useState<Hole | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardHeight, setCardHeight] = useState(FALLBACK_CARD_HEIGHT);
 
   const measure = useCallback(() => {
     const el = document.querySelector(STEPS[step].selector);
@@ -92,6 +96,13 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
     };
   }, [open, step, measure]);
 
+  // Measure the card's REAL height (it varies by step — longer body text, Back button present
+  // or not) before paint, so the position below never has to guess and then overflow.
+  useLayoutEffect(() => {
+    if (!open || !cardRef.current) return;
+    setCardHeight(cardRef.current.getBoundingClientRect().height);
+  }, [open, step, hole]);
+
   if (!open) return null;
 
   const isFirst = step === 0;
@@ -109,15 +120,24 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
   const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
 
-  const placeBelow = !hole || vh - hole.bottom >= MIN_TOOLTIP_SPACE || vh - hole.bottom >= hole.top;
+  // Always resolved to a `top` in px, clamped so the card's REAL (measured) height never pushes
+  // it past either viewport edge — a fixed-position box that overflows the viewport can't be
+  // scrolled into view, so it just reads as "covered by the browser window."
+  let tooltipTop: number;
+  if (!hole) {
+    tooltipTop = Math.max(MARGIN, vh / 2 - cardHeight / 2);
+  } else {
+    const spaceBelow = vh - hole.bottom - GAP - MARGIN;
+    const spaceAbove = hole.top - GAP - MARGIN;
+    tooltipTop =
+      spaceBelow >= cardHeight || spaceBelow >= spaceAbove
+        ? Math.min(hole.bottom + GAP, vh - cardHeight - MARGIN) // below, clamped to the bottom edge
+        : Math.max(MARGIN, hole.top - GAP - cardHeight); // above, clamped to the top edge
+    tooltipTop = Math.max(MARGIN, tooltipTop);
+  }
   const tooltipLeft = hole
-    ? Math.min(Math.max(hole.left, 16), Math.max(16, vw - TOOLTIP_W - 16))
-    : Math.max(16, vw / 2 - TOOLTIP_W / 2);
-  const tooltipStyle = hole
-    ? placeBelow
-      ? { top: hole.bottom + 16, left: tooltipLeft }
-      : { bottom: vh - hole.top + 16, left: tooltipLeft }
-    : { top: "50%", left: tooltipLeft, transform: "translateY(-50%)" };
+    ? Math.min(Math.max(hole.left, MARGIN), Math.max(MARGIN, vw - TOOLTIP_W - MARGIN))
+    : Math.max(MARGIN, vw / 2 - TOOLTIP_W / 2);
 
   return (
     <>
@@ -138,8 +158,15 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
         <div className="fixed inset-0 bg-black/75 z-[90]" />
       )}
 
-      <div className="fixed z-[91]" style={{ ...tooltipStyle, width: `min(${TOOLTIP_W}px, calc(100vw - 2rem))` }}>
-        <div className="glass-card p-5 space-y-4">
+      <div
+        className="fixed z-[91]"
+        style={{ top: tooltipTop, left: tooltipLeft, width: `min(${TOOLTIP_W}px, calc(100vw - 2rem))` }}
+      >
+        <div
+          ref={cardRef}
+          className="glass-card p-5 space-y-4 overflow-y-auto"
+          style={{ maxHeight: vh - MARGIN * 2 }}
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-wider text-pink-300 font-bold">
               Step {step + 1} of {STEPS.length}
