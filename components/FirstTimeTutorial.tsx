@@ -160,7 +160,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
           <div className="fixed bg-black/75 z-[90]" style={{ top: hole.top, left: 0, width: hole.left, height: hole.bottom - hole.top }} />
           <div className="fixed bg-black/75 z-[90]" style={{ top: hole.top, left: hole.right, right: 0, height: hole.bottom - hole.top }} />
           <div
-            className="fixed pointer-events-none z-[90] border-2 border-pink-400 shadow-[0_0_0_4px_rgba(236,72,153,0.15),0_0_24px_2px_rgba(236,72,153,0.6)]"
+            className="fixed pointer-events-none z-[90] border-2 border-brand-400"
             style={{ top: hole.top, left: hole.left, width: hole.right - hole.left, height: hole.bottom - hole.top }}
           />
         </>
@@ -178,7 +178,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
           style={{ maxHeight: vh - MARGIN * 2 }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-pink-300 font-bold">
+            <span className="text-[10px] uppercase tracking-wider text-brand-300 font-bold">
               Step {step + 1} of {STEPS.length}
             </span>
             <button onClick={finish} aria-label="Close tutorial" className="dazzle-close">
@@ -189,13 +189,13 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
           </div>
 
           <div>
-            <h3 className="text-base font-bold text-white mb-1.5">{current.title}</h3>
-            <p className="text-sm text-slate-300 leading-relaxed">{current.body}</p>
+            <h3 className="text-base font-bold text-brand-300 mb-1.5">{current.title}</h3>
+            <p className="text-sm text-brand-300 leading-relaxed">{current.body}</p>
           </div>
 
           <div className="flex items-center justify-center gap-1.5">
             {STEPS.map((_, i) => (
-              <span key={i} className={`w-1.5 h-1.5 ${i === step ? "bg-pink-400" : "bg-white/15"}`} />
+              <span key={i} className={`w-1.5 h-1.5 ${i === step ? "bg-brand-400" : "bg-brand-900"}`} />
             ))}
           </div>
 
@@ -220,7 +220,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
             <button
               type="button"
               onClick={finish}
-              className="w-full text-center text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              className="w-full text-center text-xs text-brand-700 hover:text-brand-300 transition-colors"
             >
               Skip tutorial
             </button>
