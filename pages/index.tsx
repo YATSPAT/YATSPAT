@@ -610,15 +610,24 @@ export default function Home() {
                     {rules.map((rule, i) => (
                       <div key={i} className="rounded-none border border-white/[0.05] bg-surface-900/60 p-3 space-y-3">
                         <div className="flex items-center gap-2">
-                          <select
-                            className="glass-input text-sm !py-2 flex-1 !border-pink-400/50 focus:!border-pink-400/80"
-                            value={rule.type}
-                            onChange={(e) => updateRule(i, { type: e.target.value as RuleType })}
-                          >
-                            {RULE_OPTIONS.map((o) => (
-                              <option key={o.type} value={o.type}>{o.label}</option>
-                            ))}
-                          </select>
+                          <div className="relative flex-1">
+                            <select
+                              className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-pink-400/50 focus:!border-pink-400/80"
+                              value={rule.type}
+                              onChange={(e) => updateRule(i, { type: e.target.value as RuleType })}
+                            >
+                              {RULE_OPTIONS.map((o) => (
+                                <option key={o.type} value={o.type}>{o.label}</option>
+                              ))}
+                            </select>
+                            <svg
+                              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-pink-400"
+                              viewBox="0 0 20 20"
+                              fill="none"
+                            >
+                              <path d="M4.5 7.5l5.5 5.5 5.5-5.5" stroke="currentColor" strokeWidth="3.25" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
                           {rules.length > 1 && (
                             <button type="button" onClick={() => removeRule(i)} className="text-xs text-rose-400 hover:text-rose-300 px-2 shrink-0">
                               Remove
