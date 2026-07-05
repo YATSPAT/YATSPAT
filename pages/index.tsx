@@ -455,6 +455,7 @@ export default function Home() {
             <nav className="flex items-center gap-1 text-sm">
               <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
               <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
+              <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
               <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
             </nav>
           </div>
@@ -975,9 +976,7 @@ export default function Home() {
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
             <a
-              href="https://wenstimmy.fun/docs"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="text-brand-600 hover:text-brand-400 transition-colors"
             >
               &gt; Docs
