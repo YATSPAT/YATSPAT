@@ -8,7 +8,7 @@ interface Section {
 
 const SECTIONS: Section[] = [
   { id: "overview", title: "Overview" },
-  { id: "whitelabel", title: "What YATSPAT is" },
+  { id: "whitelabel", title: "Pipeline engine" },
   { id: "non-custodial", title: "Non-custodial by design" },
   { id: "building", title: "Building a pipeline" },
   { id: "reach-modes", title: "Holder reach modes" },
@@ -86,15 +86,15 @@ export default function Docs() {
                 </p>
               </DocSection>
 
-              <DocSection id="whitelabel" title="What YATSPAT is">
+              <DocSection id="whitelabel" title="Pipeline engine">
                 <p>
-                  YATSPAT is the whitelabel core underneath this kind of tool — one platform, many brands. Each
-                  brand gets its own token identity, visual theme, and copy, but they all run the same underlying
-                  pipeline engine described on this page.
+                  YATSPAT is the pipeline engine for Pump.fun creator-fee routing. It keeps the workflow explicit:
+                  choose the source token, decide where collected SOL goes, validate the exact rules, then activate
+                  the generated receiver wallet.
                 </p>
                 <p>
-                  If a brand you recognize (a specific community's own site) sends you here, everything below is
-                  exactly how their pipelines work too.
+                  Sites using YATSPAT can have their own token identity and visual system, but the pipeline behavior
+                  described here stays the same.
                 </p>
               </DocSection>
 
@@ -217,8 +217,8 @@ export default function Docs() {
                     <p>Reach out — pipelines can be disabled so they stop being checked and never spend again.</p>
                   </div>
                   <div>
-                    <p className="text-brand-200 font-semibold">Is this the same engine as the branded sites?</p>
-                    <p>Yes — YATSPAT is the shared whitelabel core; branded instances just layer their own identity on top.</p>
+                    <p className="text-brand-200 font-semibold">Do other sites use this same pipeline engine?</p>
+                    <p>Yes. Sites using YATSPAT can have their own identity, but the fee-routing behavior stays the same.</p>
                   </div>
                 </div>
               </DocSection>

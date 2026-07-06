@@ -3,12 +3,10 @@ import bs58 from "bs58";
 import { encryptKeypair, decryptKeypair, type EncryptedKeypair } from "./crypto";
 
 /* ── Generate a pipeline's operations wallet server-side ──────────────
-   Sole-receiver (perpad-style) fee routing: the panel creates a fresh,
-   single-use wallet the creator sets as their token's fee receiver. The
-   private key is generated here, encrypted at rest immediately, and never
-   returned to the client — only the public key is surfaced (that's all the
-   creator needs to point Pump.fun's fee receiver at). This replaces the old
-   paste-a-private-key flow, which required custody of the creator's own key. */
+   Sole-receiver fee routing: the panel creates a fresh, single-use wallet
+   the creator sets as their token's fee receiver. The private key is generated
+   here, encrypted at rest immediately, and never returned to the client — only
+   the public key is surfaced for Pump.fun fee-receiver setup. */
 
 export interface GeneratedWallet {
   publicKey: string;

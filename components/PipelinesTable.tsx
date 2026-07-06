@@ -142,7 +142,7 @@ export default function PipelinesTable() {
 
   return (
     <div className="space-y-5">
-      {/* Stats row (perpad "positions" stats analog) */}
+      {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "pipes running", value: String(pipes.length) },

@@ -71,7 +71,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
     const el = document.querySelector(STEPS[step].selector) as HTMLElement | null;
     // querySelector still matches elements hidden via `display: none` (e.g. the Configuration
     // HUD below Tailwind's lg breakpoint) — those report a degenerate 0x0 rect at (0,0), which
-    // would otherwise look like a "valid" hole in the corner instead of falling back cleanly.
+    // would otherwise report a degenerate "valid" hole in the corner instead of using the fallback.
     const isHidden = !el || (el.offsetWidth === 0 && el.offsetHeight === 0);
     if (!el || isHidden) {
       setHole(null);
@@ -181,7 +181,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
             <span className="text-[10px] uppercase tracking-wider text-brand-300 font-bold">
               Step {step + 1} of {STEPS.length}
             </span>
-            <button onClick={finish} aria-label="Close tutorial" className="dazzle-close">
+            <button onClick={finish} aria-label="Close tutorial" className="icon-close">
               <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none">
                 <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>

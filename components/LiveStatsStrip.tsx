@@ -23,8 +23,7 @@ function timeAgo(iso: string | null): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-/* Static, non-scrolling replacement for the old promo marquee — real platform numbers
-   instead of a ticker, pulled from the same public endpoint the Live Pipes section uses. */
+/* Current platform numbers from the same public endpoint the Live Pipes section uses. */
 export default function LiveStatsStrip() {
   const [pipes, setPipes] = useState<PublicPipeline[]>([]);
   const [loaded, setLoaded] = useState(false);

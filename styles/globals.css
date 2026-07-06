@@ -16,10 +16,7 @@
   }
 }
 
-/* ── Apple II terminal look ───────────────────────────────────────────
-   Flat black surfaces, 1px solid green hairlines, no gradients, no soft
-   ambient shadows. Corners are square everywhere (rounded-none) — that
-   part of the app was already right for this. */
+/* Terminal surface system: flat black panels, green hairlines, square corners. */
 @layer components {
   .glass-card {
     @apply bg-surface-950 rounded-none border border-brand-700/60;
@@ -53,8 +50,7 @@
   }
 }
 
-/* Subtle CRT scanlines — a thin repeating overlay, not a heavy filter. Apply to
-   any fixed/absolute full-bleed layer (e.g. behind <main>). */
+/* Subtle CRT scanlines for full-bleed background layers. */
 .crt-scanlines {
   background-image: repeating-linear-gradient(
     to bottom,
@@ -65,7 +61,7 @@
   );
 }
 
-/* Blinking block cursor, for a terminal-prompt feel next to headings/labels. */
+/* Blinking block cursor for prompt-style headings and labels. */
 .term-cursor {
   display: inline-block;
   width: 0.55em;
@@ -79,9 +75,7 @@
   50%, 100% { opacity: 0; }
 }
 
-/* ── Sidebar accents ──────────────────────────────────────────────────
-   Same structure as before, recolored and de-glowed: flat green, no
-   pink sweep gradients, no soft box-shadow blooms. */
+/* Sidebar accents */
 .sidebar-accent-bar {
   height: 2px;
   width: 100%;
@@ -101,10 +95,10 @@
   50%, 100% { opacity: 0.25; }
 }
 
-.sidebar-heading-dazzle {
+.sidebar-heading-accent {
   @apply relative inline-block pb-2;
 }
-.sidebar-heading-dazzle::after {
+.sidebar-heading-accent::after {
   content: "";
   position: absolute;
   left: 0;
@@ -115,11 +109,11 @@
 }
 
 /* Close button: idle hairline box, corner marks snap out on hover. */
-.dazzle-close {
+.icon-close {
   @apply relative text-brand-700 hover:text-brand-300 p-1.5 border border-brand-800 transition-colors duration-150;
 }
-.dazzle-close::before,
-.dazzle-close::after {
+.icon-close::before,
+.icon-close::after {
   content: "";
   position: absolute;
   width: 6px;
@@ -128,56 +122,55 @@
   opacity: 0;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.dazzle-close::before {
+.icon-close::before {
   top: -1px;
   left: -1px;
   border-top: 2px solid;
   border-left: 2px solid;
   transform: translate(3px, 3px);
 }
-.dazzle-close::after {
+.icon-close::after {
   bottom: -1px;
   right: -1px;
   border-bottom: 2px solid;
   border-right: 2px solid;
   transform: translate(-3px, -3px);
 }
-.dazzle-close:hover::before,
-.dazzle-close:hover::after {
+.icon-close:hover::before,
+.icon-close:hover::after {
   opacity: 1;
   transform: translate(0, 0);
 }
 
-/* Contract code block: idle .glass-input; a slow, faint brightness pulse
-   instead of a colored glow bloom. */
-@keyframes dazzle-contract-breathe {
+/* Contract code block pulse */
+@keyframes contract-border-pulse {
   0%, 100% { border-color: rgba(51, 255, 51, 0.35); }
   50% { border-color: rgba(51, 255, 51, 0.9); }
 }
-.dazzle-contract {
-  animation: dazzle-contract-breathe 3s ease-in-out infinite;
+.contract-pulse {
+  animation: contract-border-pulse 3s ease-in-out infinite;
 }
 
 /* Copy button: flat at rest; inverts (green fill, black text) on hover,
    plus a "copied" state. */
-.dazzle-copy {
+.copy-action {
   @apply relative transition-colors duration-150;
 }
-.dazzle-copy:hover {
+.copy-action:hover {
   background-color: theme('colors.brand.500');
   color: #000;
 }
-.dazzle-copy.dazzle-copied {
+.copy-action.is-copied {
   background-color: theme('colors.brand.400');
   color: #000;
   border-color: theme('colors.brand.400');
 }
 
 /* Link chips: idle borders match current design; underline draws in on hover. */
-.dazzle-chip {
+.token-chip {
   @apply relative transition-colors duration-150;
 }
-.dazzle-chip::after {
+.token-chip::after {
   content: "";
   position: absolute;
   left: 0;
@@ -187,12 +180,11 @@
   background: theme('colors.brand.400');
   transition: width 0.2s ease;
 }
-.dazzle-chip:hover::after {
+.token-chip:hover::after {
   width: 100%;
 }
 
-/* ── Spinning coin logo (header mark) ─────────────────────────────────
-   Same 3D flip mechanic, recolored, glow toned down to a hairline. */
+/* Spinning coin logo */
 .coin-spin {
   perspective: 240px;
 }

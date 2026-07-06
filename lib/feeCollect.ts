@@ -14,10 +14,7 @@ import {
 import { OnlinePumpSdk } from "@pump-fun/pump-sdk";
 
 /* ── Collect this pipeline's creator-fee share via Pump.fun fee sharing ──
-   Replaces the old PumpPortal `collectCreatorFee` path (which only served the
-   primary creator and required custody of the creator's own key).
-
-   Model (sole-receiver, perpad-style): the creator has set THIS pipeline's
+   Model (sole-receiver): the creator has set THIS pipeline's
    generated wallet as the token's sole fee receiver (a single-shareholder
    SharingConfig at 100%). `distributeCreatorFees` is PERMISSIONLESS — any
    wallet can crank it — so the pipeline's own wallet signs and pays for the

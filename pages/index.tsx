@@ -230,9 +230,9 @@ function TokenDetails() {
         <span className="text-brand-600 text-sm block mb-1">Contract</span>
         {hasMint ? (
           <div className="flex gap-2">
-            <code className="dazzle-contract glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
+            <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
             <button
-              className={`dazzle-copy btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "dazzle-copied" : ""}`}
+              className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
               onClick={doCopy}
             >
               {copied ? "Copied" : "Copy"}
@@ -246,22 +246,22 @@ function TokenDetails() {
       </div>
       <div className="flex flex-wrap gap-2 pt-1">
         {hasMint && (
-          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-200 text-sm hover:bg-brand-500/25 transition">
+          <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="token-chip px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-200 text-sm hover:bg-brand-500/25 transition">
             Pump.fun ↗
           </a>
         )}
         {hasMint && (
-          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
+          <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" className="token-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
             Solscan ↗
           </a>
         )}
         {STIMMY.x && (
-          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
+          <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" className="token-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
             𝕏 ↗
           </a>
         )}
         {STIMMY.telegram && (
-          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="dazzle-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
+          <a href={STIMMY.telegram} target="_blank" rel="noopener noreferrer" className="token-chip px-3 py-1.5 rounded-none bg-surface-800 border border-brand-900/50 text-brand-300 text-sm hover:border-brand-700/60 transition">
             Telegram ↗
           </a>
         )}
@@ -353,7 +353,7 @@ export default function Home() {
     return () => { alive = false; clearTimeout(t); };
   }, [mintsKey]);
 
-  // Any edit invalidates a prior VALIDATE result — stale "looks good" would be misleading.
+  // Any edit invalidates a prior VALIDATE result; stale validation would be misleading.
   const rulesKey = JSON.stringify(rules);
   useEffect(() => {
     setValidateResult(null);
@@ -508,7 +508,7 @@ export default function Home() {
               <Logo className="w-8 h-8" />
               <span className="text-lg font-bold text-brand-300">Wen Stimmy</span>
             </span>
-            <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="dazzle-close">
+            <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="icon-close">
               <svg viewBox="0 0 20 20" className="w-5 h-5" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
             </button>
           </div>
@@ -516,7 +516,7 @@ export default function Home() {
           <div className="sidebar-accent-bar -mx-5" />
 
           <div>
-            <h4 className="sidebar-heading-dazzle flex items-center text-xs font-bold uppercase tracking-wider text-brand-300 mb-2.5">
+            <h4 className="sidebar-heading-accent flex items-center text-xs font-bold uppercase tracking-wider text-brand-300 mb-2.5">
               <span className="sidebar-label-tick" />
               Our token
             </h4>
@@ -527,7 +527,7 @@ export default function Home() {
 
       <FirstTimeTutorial open={showTutorial} onClose={closeTutorial} />
 
-      {/* Live stats strip — real platform numbers instead of a promo ticker */}
+      {/* Live stats strip — current platform numbers from the public pipeline endpoint. */}
       <div className="pt-[68px]">
         <LiveStatsStrip />
       </div>
@@ -551,7 +551,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Live pipes dashboard (perpad listings-table analog) */}
+      {/* Live pipes dashboard */}
       <section id="pipes" className="relative max-w-6xl mx-auto pb-14 px-4 scroll-mt-24">
         <div className="flex items-center gap-3 mb-5">
           <h2 className="text-2xl font-bold text-brand-300 tracking-tight">Live pipes</h2>
@@ -810,7 +810,7 @@ export default function Home() {
             )}
           </div>
 
-          {/* HUD side panel — reacts to the draft the chat has extracted so far */}
+          {/* HUD side panel — mirrors the current draft before creation. */}
           <div className="hidden lg:block sticky top-32">
             <div className="hud-panel">
               <h4 className="text-sm font-bold text-brand-300 tracking-wide mb-3">Configuration HUD</h4>
@@ -984,7 +984,7 @@ export default function Home() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 pb-6 text-center text-[11px] text-brand-800">
-          YATSPAT is the whitelabel core.{" "}
+          YATSPAT powers automated Pump.fun fee routing.{" "}
           <a
             href="https://wenstimmy.fun"
             target="_blank"
@@ -993,7 +993,7 @@ export default function Home() {
           >
             wenstimmy.fun
           </a>{" "}
-          runs the branded version of this repo.
+          uses this pipeline engine.
         </div>
       </footer>
     </main>
