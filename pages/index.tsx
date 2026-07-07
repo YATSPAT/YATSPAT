@@ -578,8 +578,9 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
+                  <label htmlFor="feeMint" className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
                   <input
+                    id="feeMint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) => setDraft((d) => ({ ...d, feeMint: e.target.value }))}
@@ -626,6 +627,7 @@ export default function Home() {
 
                         <div className="flex items-center gap-3">
                           <input
+                            aria-label="Rule percentage"
                             type="range"
                             min={0}
                             max={100}
@@ -640,12 +642,14 @@ export default function Home() {
                         {rule.type === "distribute" && (
                           <>
                             <input
+                              aria-label="Airdrop to holders of this token mint"
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
                               onChange={(e) => updateRule(i, { holderMint: e.target.value })}
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
+                              aria-label="Token to airdrop (usually your own mint)"
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
                               onChange={(e) => updateRule(i, { targetMint: e.target.value })}
@@ -680,6 +684,7 @@ export default function Home() {
                         )}
                         {rule.type === "buy-burn" && (
                           <input
+                            aria-label="Token mint to buy back and burn"
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
                             onChange={(e) => updateRule(i, { targetMint: e.target.value })}
@@ -688,6 +693,7 @@ export default function Home() {
                         )}
                         {rule.type === "send" && (
                           <input
+                            aria-label="Destination wallet address"
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
                             onChange={(e) => updateRule(i, { targetWallet: e.target.value })}
@@ -712,8 +718,9 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
+                  <label htmlFor="dropThresholdSol" className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
                   <input
+                    id="dropThresholdSol"
                     type="number"
                     min="0"
                     step="0.01"
