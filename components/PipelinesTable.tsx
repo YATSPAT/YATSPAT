@@ -75,6 +75,7 @@ function TokenCard({ p }: { p: PublicPipeline }) {
       href={mint ? `https://pump.fun/coin/${mint}` : "#"}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label={`View ${ticker} on Pump.fun`}
       className="block w-48 shrink-0 snap-start glass-card p-4 hover:brightness-110 transition"
     >
       <div className="flex items-center gap-3 min-w-0">
