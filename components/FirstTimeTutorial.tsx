@@ -113,19 +113,31 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
     setCardHeight(cardRef.current.getBoundingClientRect().height);
   }, [open, step, hole]);
 
-  if (!open) return null;
-
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
 
-  const finish = () => {
+  const finish = useCallback(() => {
     setStep(0);
     setHole(null);
     onClose();
-  };
-  const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
-  const back = () => setStep((s) => Math.max(0, s - 1));
+  }, [onClose]);
+
+  const next = useCallback(() => setStep((s) => Math.min(STEPS.length - 1, s + 1)), []);
+  const back = useCallback(() => setStep((s) => Math.max(0, s - 1)), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") finish();
+      if (e.key === "ArrowRight") next();
+      if (e.key === "ArrowLeft") back();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, finish, next, back]);
+
+  if (!open) return null;
 
   const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
@@ -175,10 +187,13 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
         <div
           ref={cardRef}
           className="glass-card p-5 space-y-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tour-title"
           style={{ maxHeight: vh - MARGIN * 2 }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-brand-300 font-bold">
+            <span className="text-[10px] uppercase tracking-wider text-brand-300 font-bold" aria-live="polite">
               Step {step + 1} of {STEPS.length}
             </span>
             <button onClick={finish} aria-label="Close tutorial" className="icon-close">
@@ -189,13 +204,22 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
           </div>
 
           <div>
-            <h3 className="text-base font-bold text-brand-300 mb-1.5">{current.title}</h3>
+            <h3 id="tour-title" className="text-base font-bold text-brand-300 mb-1.5">{current.title}</h3>
             <p className="text-sm text-brand-300 leading-relaxed">{current.body}</p>
           </div>
 
-          <div className="flex items-center justify-center gap-1.5">
+          <div className="flex items-center justify-center gap-1.5" role="tablist" aria-label="Tutorial progress">
             {STEPS.map((_, i) => (
-              <span key={i} className={`w-1.5 h-1.5 ${i === step ? "bg-brand-400" : "bg-brand-900"}`} />
+              <button
+                key={i}
+                type="button"
+                onClick={() => setStep(i)}
+                aria-label={`Go to step ${i + 1}`}
+                aria-current={i === step ? "step" : undefined}
+                className={`w-1.5 h-1.5 transition-colors focus-visible:ring-1 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950 ${
+                  i === step ? "bg-brand-400" : "bg-brand-900 hover:bg-brand-700"
+                }`}
+              />
             ))}
           </div>
 
@@ -211,7 +235,7 @@ export default function FirstTimeTutorial({ open, onClose }: { open: boolean; on
               </button>
             ) : (
               <button type="button" onClick={finish} className="btn-deploy flex-1 text-sm">
-                Let's go
+                Let&apos;s go
               </button>
             )}
           </div>
