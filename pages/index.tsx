@@ -279,6 +279,7 @@ export default function Home() {
   const [deployResult, setDeployResult] = useState<any>(null);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validateResult, setValidateResult] = useState<any>(null);
@@ -441,6 +442,13 @@ export default function Home() {
     setActivateResult(null);
   };
 
+  const copyWallet = () => {
+    if (!deployResult?.walletPublicKey) return;
+    navigator.clipboard?.writeText(deployResult.walletPublicKey);
+    setWalletCopied(true);
+    setTimeout(() => setWalletCopied(false), 1200);
+  };
+
   return (
     <main id="top" className="relative min-h-screen bg-surface-950 overflow-hidden">
       <CircuitBackground />
@@ -470,13 +478,13 @@ export default function Home() {
             </button>
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" aria-label="Visit X (formerly Twitter)" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
                 𝕏
               </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" aria-label="View on Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <PumpIcon className="w-5 h-5" />
               </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" aria-label="View on Solscan" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
@@ -578,8 +586,9 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
+                  <label htmlFor="feeMint" className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
                   <input
+                    id="feeMint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) => setDraft((d) => ({ ...d, feeMint: e.target.value }))}
@@ -601,6 +610,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
+                              aria-label="Select rule type"
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) => updateRule(i, { type: e.target.value as RuleType })}
@@ -630,6 +640,7 @@ export default function Home() {
                             min={0}
                             max={100}
                             value={rule.pct}
+                            aria-label="Rule percentage"
                             onChange={(e) => updateRule(i, { pct: Math.max(0, Math.min(100, Number(e.target.value))) })}
                             className="flex-1"
                             style={{ background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)` }}
@@ -712,8 +723,9 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
+                  <label htmlFor="dropThreshold" className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
                   <input
+                    id="dropThreshold"
                     type="number"
                     min="0"
                     step="0.01"
@@ -767,12 +779,15 @@ export default function Home() {
                   <div className="flex gap-2">
                     <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
                     <button
-                      className="btn-secondary shrink-0 text-xs"
-                      onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
+                      className={`copy-action btn-secondary shrink-0 text-xs py-2 px-3 ${walletCopied ? "is-copied" : ""}`}
+                      onClick={copyWallet}
                     >
-                      Copy
+                      {walletCopied ? "Copied" : "Copy"}
                     </button>
                   </div>
+                </div>
+                <div className="p-3 rounded-none bg-brand-500/10 border border-brand-500/30 text-brand-300 text-[11px] leading-relaxed">
+                  <span className="text-brand-400 font-bold">Important:</span> Keep ~0.05 SOL in this wallet to cover transaction fees. If it hits 0 SOL, the pipeline will stop.
                 </div>
                 <div className="p-4 rounded-none bg-surface-800/60 border border-brand-900/30 text-xs text-brand-300 space-y-2">
                   <div className="flex justify-between"><span>Token</span><span className="text-brand-300 font-mono">{deployResult.feeMint?.slice(0, 8)}…</span></div>
