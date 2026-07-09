@@ -38,5 +38,9 @@
   },
   "overrides": {
     "uuid": "8.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.35"
   }
 }
