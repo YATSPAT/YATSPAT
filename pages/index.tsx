@@ -64,7 +64,7 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
 // gambling/pump.fun spirit of the app, distinct from the plain "R" wordmark used elsewhere.
 function CoinLogo({ className = "w-9 h-9" }: { className?: string }) {
   return (
-    <span className={`coin-spin inline-block shrink-0 ${className}`}>
+    <span className={`coin-spin inline-block shrink-0 ${className}`} role="img" aria-label="Wen Stimmy - Animated Logo">
       <span className="coin-spin-inner">
         <span className="coin-face coin-face-front flex items-center justify-center bg-surface-950 text-brand-400 font-black text-base leading-none">
           S
@@ -277,6 +277,7 @@ export default function Home() {
   const [draft, setDraft] = useState<Draft>({ rules: [{ ...newRule(), pct: 100 }] });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -439,6 +440,14 @@ export default function Home() {
     setDraft({ rules: [{ ...newRule(), pct: 100 }] });
     setDeployResult(null);
     setActivateResult(null);
+    setWalletCopied(false);
+  };
+
+  const doCopyWallet = () => {
+    if (!deployResult?.walletPublicKey) return;
+    navigator.clipboard?.writeText(deployResult.walletPublicKey);
+    setWalletCopied(true);
+    setTimeout(() => setWalletCopied(false), 1200);
   };
 
   return (
@@ -470,13 +479,13 @@ export default function Home() {
             </button>
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" aria-label="Follow us on X" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
                 𝕏
               </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" aria-label="View on Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <PumpIcon className="w-5 h-5" />
               </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" aria-label="View on Solscan Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
@@ -739,8 +748,50 @@ export default function Home() {
                 <button data-tour="create-button" className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
                   {deploying ? "Creating…" : "> Create pipeline"}
                 </button>
+
+                {/* Mobile-only validation summary and trigger */}
+                {mintOk && rulesOk && (
+                  <div className="lg:hidden p-4 rounded-none border border-brand-900 bg-surface-900/60 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-brand-300">Configuration HUD (Mobile)</span>
+                      <span className={`text-[10px] uppercase font-bold ${validated ? "text-brand-400" : "text-brand-600"}`}>
+                        {validated ? "✓ Validated" : "Pending validation"}
+                      </span>
+                    </div>
+
+                    {!validated && (
+                      <>
+                        <p className="text-xs text-brand-700">
+                          Review and validate your pipeline configuration to enable the create button.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={validate}
+                          disabled={validating}
+                          className="btn-secondary w-full text-xs font-bold py-2"
+                        >
+                          {validating ? "VALIDATING…" : "VALIDATE CONFIGURATION"}
+                        </button>
+                      </>
+                    )}
+
+                    {validateResult && (
+                      <div className={`p-2.5 border text-[11px] leading-relaxed ${validateResult.ok ? "border-brand-500/30 bg-brand-500/10 text-brand-300" : "border-brand-600/30 bg-brand-600/10 text-brand-600"}`}>
+                        {validateResult.ok ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-brand-400">✓</span>
+                            <span>Configuration confirmed. Ready to deploy.</span>
+                          </div>
+                        ) : (
+                          <p>{validateResult.error}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {mintOk && rulesOk && !validated && (
-                  <p className="text-xs text-brand-300 -mt-3">
+                  <p className="text-xs text-brand-300 -mt-3 hidden lg:block">
                     Press VALIDATE in the Configuration HUD to review the exact workflow and unlock this.
                   </p>
                 )}
@@ -767,10 +818,10 @@ export default function Home() {
                   <div className="flex gap-2">
                     <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
                     <button
-                      className="btn-secondary shrink-0 text-xs"
-                      onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
+                      className={`copy-action btn-secondary shrink-0 text-xs py-2 px-3 ${walletCopied ? "is-copied" : ""}`}
+                      onClick={doCopyWallet}
                     >
-                      Copy
+                      {walletCopied ? "Copied" : "Copy"}
                     </button>
                   </div>
                 </div>
@@ -894,7 +945,7 @@ export default function Home() {
                   data-tour="validate-button"
                   onClick={validate}
                   disabled={validating}
-                  className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
+                  className={`btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50 ${mintOk && rulesOk && !validated ? "contract-pulse" : ""}`}
                 >
                   {validating ? "VALIDATING…" : "VALIDATE"}
                 </button>
