@@ -229,11 +229,11 @@ function TokenDetails() {
       <div>
         <span className="text-brand-600 text-sm block mb-1">Contract</span>
         {hasMint ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2" aria-live="polite">
             <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
-              onClick={doCopy}
+              onClick={doCopy} aria-label={copied ? "Contract address copied" : "Copy contract address"}
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -456,7 +456,7 @@ export default function Home() {
               <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
               <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
               <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
-              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
+              <button aria-expanded={menuOpen} aria-controls="token-sidebar" onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -470,13 +470,13 @@ export default function Home() {
             </button>
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
+              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" aria-label="X (formerly Twitter)" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
                 𝕏
               </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" aria-label="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <PumpIcon className="w-5 h-5" />
               </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
+              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" aria-label="Solana Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
@@ -499,7 +499,7 @@ export default function Home() {
         className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMenuOpen(false)}
       />
-      <aside
+      <aside id="token-sidebar"
         className={`fixed top-0 left-0 z-[70] h-full w-80 max-w-[85vw] transform transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="h-full glass-card rounded-none overflow-y-auto p-5 space-y-5">
@@ -764,11 +764,11 @@ export default function Home() {
                 </p>
                 <div>
                   <label className="text-xs text-brand-600 mb-1.5 block">Your pipeline wallet (set this as the fee receiver)</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" aria-live="polite">
                     <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
                     <button
                       className="btn-secondary shrink-0 text-xs"
-                      onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
+                      aria-label="Copy pipeline wallet address" onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
                     >
                       Copy
                     </button>
