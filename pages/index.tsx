@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
@@ -234,6 +235,7 @@ function TokenDetails() {
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
               onClick={doCopy}
+              aria-live="polite"
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -302,7 +304,7 @@ export default function Home() {
     }
   };
 
-  const rules = draft.rules || [];
+  const rules = useMemo(() => draft.rules || [], [draft.rules]);
   const setRules = (r: DraftRule[]) => setDraft((d) => ({ ...d, rules: r }));
   const addRule = () => setRules([...rules, newRule()]);
   const removeRule = (i: number) => setRules(rules.filter((_, idx) => idx !== i));
@@ -455,7 +457,7 @@ export default function Home() {
             <nav className="flex items-center gap-1 text-sm">
               <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
               <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
-              <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
+              <Link href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</Link>
               <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
             </nav>
           </div>
@@ -578,8 +580,9 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
+                  <label htmlFor="feeMint" className="block text-sm font-semibold text-brand-300 mb-1.5">Your token</label>
                   <input
+                    id="feeMint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) => setDraft((d) => ({ ...d, feeMint: e.target.value }))}
@@ -712,8 +715,9 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
+                  <label htmlFor="dropThreshold" className="block text-xs text-brand-600 mb-1.5">SOL drop threshold (optional)</label>
                   <input
+                    id="dropThreshold"
                     type="number"
                     min="0"
                     step="0.01"
@@ -736,12 +740,45 @@ export default function Home() {
                   )}
                 </div>
 
+                <div className="lg:hidden space-y-3">
+                  <button
+                    type="button"
+                    onClick={validate}
+                    disabled={validating}
+                    className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
+                  >
+                    {validating ? "VALIDATING…" : "VALIDATE CONFIGURATION"}
+                  </button>
+                  {validateResult && (
+                    <div
+                      className={`px-2.5 py-2 border text-[11px] leading-relaxed ${
+                        validateResult.ok
+                          ? "border-brand-500/30 bg-brand-500/10 text-brand-300"
+                          : "border-brand-600/30 bg-brand-600/10 text-brand-600"
+                      }`}
+                    >
+                      {validateResult.ok ? (
+                        <>
+                          <p className="font-semibold">Workflow valid. This pipeline will:</p>
+                          <ul className="mt-1 ml-3 space-y-1 text-emerald-200">
+                            {(validateResult.rules as ValidatedRule[]).map((r, i) => (
+                              <li key={i}>· {describeRule(r, tokenInfo)}</li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <p>{validateResult.error}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <button data-tour="create-button" className="btn-deploy w-full" type="submit" disabled={!canCreate || deploying}>
                   {deploying ? "Creating…" : "> Create pipeline"}
                 </button>
                 {mintOk && rulesOk && !validated && (
                   <p className="text-xs text-brand-300 -mt-3">
-                    Press VALIDATE in the Configuration HUD to review the exact workflow and unlock this.
+                    Press VALIDATE <span className="hidden lg:inline">in the Configuration HUD</span> to review the exact workflow and unlock this.
                   </p>
                 )}
                 {deployResult && !deployResult.ok && (
@@ -975,12 +1012,12 @@ export default function Home() {
             </span>
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
-            <a
+            <Link
               href="/docs"
               className="text-brand-600 hover:text-brand-400 transition-colors"
             >
               &gt; Docs
-            </a>
+            </Link>
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 pb-6 text-center text-[11px] text-brand-800">

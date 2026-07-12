@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 interface Section {
@@ -53,12 +54,12 @@ export default function Docs() {
       <main className="relative min-h-screen bg-surface-950">
         <header className="fixed top-0 inset-x-0 z-50 glass-card rounded-none border-b border-brand-900/30">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
-            <a href="/" className="text-lg font-bold text-brand-300 tracking-tight">
+            <Link href="/" className="text-lg font-bold text-brand-300 tracking-tight">
               yatspat <span className="text-brand-600 font-normal text-sm">/ docs</span>
-            </a>
-            <a href="/#create" className="btn-secondary text-xs !py-1.5 !px-4">
+            </Link>
+            <Link href="/#create" className="btn-secondary text-xs !py-1.5 !px-4">
               &lt; Back to app
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -67,7 +68,7 @@ export default function Docs() {
             <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-300 tracking-tight">How YATSPAT works</h1>
             <p className="mt-2 text-brand-700 text-sm max-w-2xl">
               Yet Another Token Spamming Pump.fun Attention Tool. Everything the platform does, in one place — what
-              happens to a token's creator fees, what you control, and what's permanent once you commit.
+              happens to a token&apos;s creator fees, what you control, and what&apos;s permanent once you commit.
             </p>
           </div>
 
@@ -81,7 +82,7 @@ export default function Docs() {
                 <p>
                   YATSPAT automates Pump.fun creator-fee routing. Instead of manually claiming fees and deciding
                   what to do with them, you set up a <strong className="text-brand-200">pipeline</strong> once: it
-                  collects a token's creator fees on a schedule and automatically splits them across rules you
+                  collects a token&apos;s creator fees on a schedule and automatically splits them across rules you
                   define — airdrop to holders, buy back and burn, or send to a wallet.
                 </p>
               </DocSection>
@@ -101,7 +102,7 @@ export default function Docs() {
               <DocSection id="non-custodial" title="Non-custodial by design">
                 <p>
                   Creating a pipeline generates a fresh Solana wallet dedicated to it. You then set that wallet as
-                  the token's <strong className="text-brand-200">sole Pump.fun fee receiver</strong>. Your own
+                  the token&apos;s <strong className="text-brand-200">sole Pump.fun fee receiver</strong>. Your own
                   private key never touches this app — the platform only ever holds the keypair for the wallet it
                   generated, encrypted at rest, and only that wallet ever collects or spends the fees.
                 </p>
@@ -130,7 +131,7 @@ export default function Docs() {
 
               <DocSection id="reach-modes" title="Holder reach modes">
                 <p>
-                  Airdrop rules pick recipients by lottery among a token's holders, then split the swapped amount{" "}
+                  Airdrop rules pick recipients by lottery among a token&apos;s holders, then split the swapped amount{" "}
                   <strong className="text-brand-200">equally</strong> — never weighted by balance. A lower recipient
                   cap means a bigger share each; a higher cap means broader reach. Three modes control that cap:
                 </p>
@@ -173,27 +174,27 @@ export default function Docs() {
                 <p>
                   Before you can create a pipeline, you must press <strong className="text-brand-200">VALIDATE</strong>.
                   It runs the exact same checks the create step will, plus a live on-chain lookup of every token
-                  you've referenced, and shows the precise workflow that will be created — fee source, drop
+                  you&apos;ve referenced, and shows the precise workflow that will be created — fee source, drop
                   threshold, and one plain-English line per rule.
                 </p>
                 <p className="text-brand-300/90">
                   This matters because pipelines are permanent once created — there is no edit screen. Validating is
-                  your one real chance to catch a mistake before it's locked in.
+                  your one real chance to catch a mistake before it&apos;s locked in.
                 </p>
               </DocSection>
 
               <DocSection id="activate" title="Activating on Pump.fun">
                 <p>
-                  Creating a pipeline generates its wallet but leaves it paused. Set that wallet as the token's fee
+                  Creating a pipeline generates its wallet but leaves it paused. Set that wallet as the token&apos;s fee
                   receiver on Pump.fun, then come back and press <strong className="text-brand-200">Activate</strong> —
-                  the app verifies on-chain that the wallet is genuinely entitled to the token's fees before turning
+                  the app verifies on-chain that the wallet is genuinely entitled to the token&apos;s fees before turning
                   the pipeline on. Nothing runs until that check passes.
                 </p>
               </DocSection>
 
               <DocSection id="fee" title="Platform fee">
                 <p>
-                  A flat 1.5% platform fee is taken off the top of each round before your own rules run. It's the
+                  A flat 1.5% platform fee is taken off the top of each round before your own rules run. It&apos;s the
                   only cut the app takes — everything else you configure goes exactly where you told it to.
                 </p>
               </DocSection>
@@ -202,7 +203,7 @@ export default function Docs() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-brand-200 font-semibold">Can I edit a pipeline after creating it?</p>
-                    <p>No. There's no edit endpoint — VALIDATE exists precisely because creation is final.</p>
+                    <p>No. There&apos;s no edit endpoint — VALIDATE exists precisely because creation is final.</p>
                   </div>
                   <div>
                     <p className="text-brand-200 font-semibold">Is my own private key ever exposed to this app?</p>
@@ -210,7 +211,7 @@ export default function Docs() {
                   </div>
                   <div>
                     <p className="text-brand-200 font-semibold">How often does it check for fees?</p>
-                    <p>Adaptively, between once a minute and once an hour — see "Drop threshold & adaptive polling" above.</p>
+                    <p>Adaptively, between once a minute and once an hour — see &quot;Drop threshold &amp; adaptive polling&quot; above.</p>
                   </div>
                   <div>
                     <p className="text-brand-200 font-semibold">What if I want to stop a pipeline?</p>
@@ -228,7 +229,7 @@ export default function Docs() {
 
         <footer className="relative border-t border-brand-900/60">
           <div className="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-brand-800">
-            <a href="/" className="hover:text-brand-400 transition-colors">&lt; Back to the app</a>
+            <Link href="/" className="hover:text-brand-400 transition-colors">&lt; Back to the app</Link>
           </div>
         </footer>
       </main>
