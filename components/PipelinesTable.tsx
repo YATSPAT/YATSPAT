@@ -157,10 +157,12 @@ export default function PipelinesTable() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto">
+      <div className="flex items-center gap-1.5 overflow-x-auto" role="tablist" aria-label="Filter pipelines">
         {TABS.map((t) => (
           <button
             key={t.key}
+            role="tab"
+            aria-selected={tab === t.key}
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
               tab === t.key ? "bg-brand-500/20 border border-brand-400/40 text-brand-200" : "text-brand-600 hover:text-brand-300"
