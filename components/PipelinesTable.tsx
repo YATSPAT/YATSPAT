@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface PublicRule {
   type: string;
@@ -134,6 +134,26 @@ export default function PipelinesTable() {
   const running = pipes.filter((p) => p.lastRunStatus === "success").length;
   const targets = new Set(pipes.flatMap((p) => p.targetTokens)).size;
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = TABS.findIndex((t) => t.key === tab);
+    let nextIdx = idx;
+    if (e.key === "ArrowRight") {
+      nextIdx = (idx + 1) % TABS.length;
+      e.preventDefault();
+    } else if (e.key === "ArrowLeft") {
+      nextIdx = (idx - 1 + TABS.length) % TABS.length;
+      e.preventDefault();
+    }
+    if (nextIdx !== idx) {
+      const nextKey = TABS[nextIdx].key;
+      setTab(nextKey);
+      // Move focus to the new tab button after the state update
+      setTimeout(() => {
+        document.getElementById(`tab-${nextKey}`)?.focus();
+      }, 0);
+    }
+  };
+
   const filtered = pipes.filter((p) => {
     if (tab === "live") return p.lastRunStatus === "success";
     if (tab === "pending") return !p.lastRunStatus;
@@ -157,10 +177,20 @@ export default function PipelinesTable() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label="Filter pipelines"
+        onKeyDown={handleKeyDown}
+        className="flex items-center gap-1.5 overflow-x-auto"
+      >
         {TABS.map((t) => (
           <button
             key={t.key}
+            id={`tab-${t.key}`}
+            role="tab"
+            aria-selected={tab === t.key}
+            aria-controls="pipeline-panel"
+            tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
               tab === t.key ? "bg-brand-500/20 border border-brand-400/40 text-brand-200" : "text-brand-600 hover:text-brand-300"
@@ -172,21 +202,23 @@ export default function PipelinesTable() {
       </div>
 
       {/* Carousel — one token card per pipe */}
-      {!loaded ? (
-        <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
-      ) : filtered.length === 0 ? (
-        <div className="glass-card py-12 text-center">
-          <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
-          <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
-          <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
-          {filtered.map((p) => (
-            <TokenCard key={p.id} p={p} />
-          ))}
-        </div>
-      )}
+      <div id="pipeline-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {!loaded ? (
+          <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="glass-card py-12 text-center">
+            <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
+            <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
+            <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
+            {filtered.map((p) => (
+              <TokenCard key={p.id} p={p} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
