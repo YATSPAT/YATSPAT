@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface PublicRule {
   type: string;
@@ -47,7 +47,7 @@ function StatusBadge({ status }: { status: string | null }) {
       : { cls: "bg-brand-500/15 border-brand-400/30 text-brand-300", dot: "bg-brand-400", label: "new" };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`} />
+      <span className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`} aria-hidden="true" />
       {map.label}
     </span>
   );
@@ -109,6 +109,7 @@ export default function PipelinesTable() {
   const [pipes, setPipes] = useState<PublicPipeline[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
+  const tabListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -157,12 +158,36 @@ export default function PipelinesTable() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto">
+      <div
+        ref={tabListRef}
+        role="tablist"
+        aria-label="Pipeline filters"
+        className="flex items-center gap-1.5 overflow-x-auto"
+        onKeyDown={(e: React.KeyboardEvent) => {
+          const idx = TABS.findIndex((t) => t.key === tab);
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            const next = TABS[(idx + 1) % TABS.length];
+            setTab(next.key);
+            setTimeout(() => (tabListRef.current?.querySelector(`[id="tab-${next.key}"]`) as HTMLElement)?.focus(), 0);
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            const prev = TABS[(idx - 1 + TABS.length) % TABS.length];
+            setTab(prev.key);
+            setTimeout(() => (tabListRef.current?.querySelector(`[id="tab-${prev.key}"]`) as HTMLElement)?.focus(), 0);
+          }
+        }}
+      >
         {TABS.map((t) => (
           <button
             key={t.key}
+            id={`tab-${t.key}`}
+            role="tab"
+            aria-selected={tab === t.key}
+            aria-controls="pipeline-panel"
+            tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950 ${
               tab === t.key ? "bg-brand-500/20 border border-brand-400/40 text-brand-200" : "text-brand-600 hover:text-brand-300"
             }`}
           >
@@ -172,21 +197,23 @@ export default function PipelinesTable() {
       </div>
 
       {/* Carousel — one token card per pipe */}
-      {!loaded ? (
-        <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
-      ) : filtered.length === 0 ? (
-        <div className="glass-card py-12 text-center">
-          <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
-          <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
-          <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
-          {filtered.map((p) => (
-            <TokenCard key={p.id} p={p} />
-          ))}
-        </div>
-      )}
+      <div id="pipeline-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {!loaded ? (
+          <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="glass-card py-12 text-center">
+            <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
+            <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
+            <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
+            {filtered.map((p) => (
+              <TokenCard key={p.id} p={p} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
