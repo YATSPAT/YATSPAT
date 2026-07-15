@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
@@ -229,7 +230,7 @@ function TokenDetails() {
       <div>
         <span className="text-brand-600 text-sm block mb-1">Contract</span>
         {hasMint ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2" aria-live="polite">
             <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
@@ -277,6 +278,7 @@ export default function Home() {
   const [draft, setDraft] = useState<Draft>({ rules: [{ ...newRule(), pct: 100 }] });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -455,7 +457,7 @@ export default function Home() {
             <nav className="flex items-center gap-1 text-sm">
               <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
               <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
-              <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
+              <Link href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</Link>
               <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
             </nav>
           </div>
@@ -483,7 +485,7 @@ export default function Home() {
             <WalletMultiButton style={{ background: connected ? "#116611" : "#000000", border: "1px solid #33ff33", color: "#33ff33", borderRadius: "0", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
             {connected && (signedIn ? (
               <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all">
-                <span className="w-2 h-2 rounded-none bg-brand-400 animate-pulse" /> SIWS ✓
+                <span className="w-2 h-2 rounded-none bg-brand-400 animate-pulse" aria-hidden="true" /> SIWS ✓
               </button>
             ) : (
               <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50">
@@ -764,13 +766,17 @@ export default function Home() {
                 </p>
                 <div>
                   <label className="text-xs text-brand-600 mb-1.5 block">Your pipeline wallet (set this as the fee receiver)</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" aria-live="polite">
                     <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
                     <button
-                      className="btn-secondary shrink-0 text-xs"
-                      onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
+                      className={`btn-secondary shrink-0 text-xs ${walletCopied ? "bg-brand-400 !text-black border-brand-400" : ""}`}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(deployResult.walletPublicKey);
+                        setWalletCopied(true);
+                        setTimeout(() => setWalletCopied(false), 1200);
+                      }}
                     >
-                      Copy
+                      {walletCopied ? "Copied" : "Copy"}
                     </button>
                   </div>
                 </div>
@@ -975,12 +981,12 @@ export default function Home() {
             </span>
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
-            <a
+            <Link
               href="/docs"
               className="text-brand-600 hover:text-brand-400 transition-colors"
             >
               &gt; Docs
-            </a>
+            </Link>
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 pb-6 text-center text-[11px] text-brand-800">
