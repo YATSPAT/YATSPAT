@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useSiws } from "../hooks/useSiws";
@@ -302,7 +303,7 @@ export default function Home() {
     }
   };
 
-  const rules = draft.rules || [];
+  const rules = useMemo(() => draft.rules || [], [draft.rules]);
   const setRules = (r: DraftRule[]) => setDraft((d) => ({ ...d, rules: r }));
   const addRule = () => setRules([...rules, newRule()]);
   const removeRule = (i: number) => setRules(rules.filter((_, idx) => idx !== i));
@@ -455,7 +456,7 @@ export default function Home() {
             <nav className="flex items-center gap-1 text-sm">
               <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
               <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
-              <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
+              <Link href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</Link>
               <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
             </nav>
           </div>
@@ -483,7 +484,11 @@ export default function Home() {
             <WalletMultiButton style={{ background: connected ? "#116611" : "#000000", border: "1px solid #33ff33", color: "#33ff33", borderRadius: "0", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
             {connected && (signedIn ? (
               <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all">
-                <span className="w-2 h-2 rounded-none bg-brand-400 animate-pulse" /> SIWS ✓
+                <span
+                  aria-hidden="true"
+                  className="w-2 h-2 rounded-none bg-brand-400 animate-pulse"
+                />{" "}
+                SIWS ✓
               </button>
             ) : (
               <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50">
@@ -975,12 +980,12 @@ export default function Home() {
             </span>
             <span>Non-custodial</span>
             <span>Powered by Pump.fun fee sharing</span>
-            <a
+            <Link
               href="/docs"
               className="text-brand-600 hover:text-brand-400 transition-colors"
             >
               &gt; Docs
-            </a>
+            </Link>
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 pb-6 text-center text-[11px] text-brand-800">
