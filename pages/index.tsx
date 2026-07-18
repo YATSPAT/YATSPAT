@@ -658,6 +658,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="X / Twitter"
+                aria-label="X (formerly Twitter) profile"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors"
               >
                 𝕏
@@ -667,6 +668,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Pump.fun"
+                aria-label="Pump.fun page for our token"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <PumpIcon className="w-5 h-5" />
@@ -676,6 +678,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Explorer"
+                aria-label="Solscan Explorer page for our token"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <ScanIcon className="w-5 h-5" />
@@ -829,10 +832,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="token-mint" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
+                    id="token-mint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -934,6 +938,7 @@ export default function Home() {
                         {rule.type === "distribute" && (
                           <>
                             <input
+                              aria-label={`Rule ${i + 1} - Holder token mint address to airdrop to`}
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
                               onChange={(e) =>
@@ -942,6 +947,7 @@ export default function Home() {
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
+                              aria-label={`Rule ${i + 1} - Token mint address to distribute`}
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
                               onChange={(e) =>
@@ -991,6 +997,7 @@ export default function Home() {
                         )}
                         {rule.type === "buy-burn" && (
                           <input
+                            aria-label={`Rule ${i + 1} - Token mint address to buy back and burn`}
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
                             onChange={(e) =>
@@ -1001,6 +1008,7 @@ export default function Home() {
                         )}
                         {rule.type === "send" && (
                           <input
+                            aria-label={`Rule ${i + 1} - Destination wallet address to send SOL to`}
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
                             onChange={(e) =>
@@ -1033,10 +1041,11 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">
+                  <label htmlFor="drop-threshold-sol" className="block text-xs text-brand-600 mb-1.5">
                     SOL drop threshold (optional)
                   </label>
                   <input
+                    id="drop-threshold-sol"
                     type="number"
                     min="0"
                     step="0.01"
