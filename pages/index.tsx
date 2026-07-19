@@ -829,10 +829,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="fee-mint" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
+                    id="fee-mint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -868,6 +869,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
+                              aria-label={`Rule ${i + 1} action type`}
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) =>
@@ -921,6 +923,10 @@ export default function Home() {
                                 ),
                               })
                             }
+                            aria-label={`Rule ${i + 1} percentage allocation`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={rule.pct}
                             className="flex-1"
                             style={{
                               background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)`,
@@ -940,6 +946,7 @@ export default function Home() {
                                 updateRule(i, { holderMint: e.target.value })
                               }
                               placeholder="Airdrop to holders of this token mint…"
+                              aria-label={`Rule ${i + 1} token holder mint to target`}
                             />
                             <input
                               className="glass-input font-mono text-xs"
@@ -948,6 +955,7 @@ export default function Home() {
                                 updateRule(i, { targetMint: e.target.value })
                               }
                               placeholder="Token to airdrop (usually your own mint)…"
+                              aria-label={`Rule ${i + 1} token mint to distribute`}
                             />
                             <div data-tour="holder-modes">
                               <div className="grid grid-cols-3 gap-1.5">
@@ -997,6 +1005,7 @@ export default function Home() {
                               updateRule(i, { targetMint: e.target.value })
                             }
                             placeholder="Token mint to buy back & burn…"
+                            aria-label={`Rule ${i + 1} token mint to buy back and burn`}
                           />
                         )}
                         {rule.type === "send" && (
@@ -1007,6 +1016,7 @@ export default function Home() {
                               updateRule(i, { targetWallet: e.target.value })
                             }
                             placeholder="Destination wallet address…"
+                            aria-label={`Rule ${i + 1} destination wallet address`}
                           />
                         )}
                       </div>
@@ -1033,10 +1043,11 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">
+                  <label htmlFor="drop-threshold" className="block text-xs text-brand-600 mb-1.5">
                     SOL drop threshold (optional)
                   </label>
                   <input
+                    id="drop-threshold"
                     type="number"
                     min="0"
                     step="0.01"
