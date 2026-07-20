@@ -658,6 +658,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="X / Twitter"
+                aria-label="Visit our X / Twitter page"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors"
               >
                 𝕏
@@ -667,6 +668,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Pump.fun"
+                aria-label="View our token on Pump.fun"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <PumpIcon className="w-5 h-5" />
@@ -676,6 +678,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Explorer"
+                aria-label="View our token on Solana Explorer"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <ScanIcon className="w-5 h-5" />
@@ -829,10 +832,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="token-mint-input" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
+                    id="token-mint-input"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -868,6 +872,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
+                              aria-label={`Rule ${i + 1} Action Type`}
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) =>
@@ -921,6 +926,7 @@ export default function Home() {
                                 ),
                               })
                             }
+                            aria-label={`Rule ${i + 1} Percentage Allocation`}
                             className="flex-1"
                             style={{
                               background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)`,
@@ -939,6 +945,7 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
+                              aria-label={`Rule ${i + 1} Airdrop Holder Token Mint`}
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
@@ -947,6 +954,7 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
+                              aria-label={`Rule ${i + 1} Token to Airdrop`}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
@@ -996,6 +1004,7 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
+                            aria-label={`Rule ${i + 1} Buy Back and Burn Token Mint`}
                             placeholder="Token mint to buy back & burn…"
                           />
                         )}
@@ -1006,6 +1015,7 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
+                            aria-label={`Rule ${i + 1} Destination Wallet Address`}
                             placeholder="Destination wallet address…"
                           />
                         )}
@@ -1033,10 +1043,11 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">
+                  <label htmlFor="drop-threshold-input" className="block text-xs text-brand-600 mb-1.5">
                     SOL drop threshold (optional)
                   </label>
                   <input
+                    id="drop-threshold-input"
                     type="number"
                     min="0"
                     step="0.01"
