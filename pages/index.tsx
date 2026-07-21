@@ -829,10 +829,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="feeMint" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
+                    id="feeMint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -868,6 +869,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
+                              aria-label={`Rule ${i + 1} type`}
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) =>
@@ -900,6 +902,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => removeRule(i)}
+                              aria-label={`Remove rule ${i + 1}`}
                               className="text-xs text-brand-600 hover:text-brand-600 px-2 shrink-0"
                             >
                               Remove
@@ -913,6 +916,7 @@ export default function Home() {
                             min={0}
                             max={100}
                             value={rule.pct}
+                            aria-label={`Rule ${i + 1} percentage`}
                             onChange={(e) =>
                               updateRule(i, {
                                 pct: Math.max(
@@ -936,6 +940,7 @@ export default function Home() {
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
+                              aria-label={`Rule ${i + 1} holder token mint address`}
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
@@ -944,13 +949,14 @@ export default function Home() {
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
+                              aria-label={`Rule ${i + 1} distribution target token mint address`}
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
-                              <div className="grid grid-cols-3 gap-1.5">
+                              <div className="grid grid-cols-3 gap-1.5" role="group" aria-label={`Rule ${i + 1} reach modes`}>
                                 {HOLDER_MODES.map((m) => {
                                   const active =
                                     (rule.holderMode || "spam") === m.key;
@@ -961,6 +967,7 @@ export default function Home() {
                                       onClick={() =>
                                         updateRule(i, { holderMode: m.key })
                                       }
+                                      aria-label={`Rule ${i + 1} reach mode ${m.label}: ${m.hint}`}
                                       className={`px-2 py-1.5 rounded-none border text-center transition-colors ${
                                         active
                                           ? "bg-brand-500/20 border-brand-400/50 text-brand-100"
@@ -993,6 +1000,7 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
+                            aria-label={`Rule ${i + 1} target token mint address to buy back and burn`}
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
@@ -1003,6 +1011,7 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
+                            aria-label={`Rule ${i + 1} destination wallet address`}
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
@@ -1033,10 +1042,11 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">
+                  <label htmlFor="dropThreshold" className="block text-xs text-brand-600 mb-1.5">
                     SOL drop threshold (optional)
                   </label>
                   <input
+                    id="dropThreshold"
                     type="number"
                     min="0"
                     step="0.01"
