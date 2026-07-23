@@ -335,6 +335,7 @@ function TokenDetails() {
               {shortMint(STIMMY.mint)}
             </code>
             <button
+              aria-label="Copy token contract address"
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
               onClick={doCopy}
             >
@@ -829,10 +830,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="fee-mint-input" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
+                    id="fee-mint-input"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -868,6 +870,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
+                              aria-label={`Rule ${i + 1} action type`}
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) =>
@@ -900,6 +903,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => removeRule(i)}
+                              aria-label={`Remove rule ${i + 1}`}
                               className="text-xs text-brand-600 hover:text-brand-600 px-2 shrink-0"
                             >
                               Remove
@@ -913,6 +917,7 @@ export default function Home() {
                             min={0}
                             max={100}
                             value={rule.pct}
+                            aria-label={`Rule ${i + 1} percentage`}
                             onChange={(e) =>
                               updateRule(i, {
                                 pct: Math.max(
@@ -935,6 +940,7 @@ export default function Home() {
                           <>
                             <input
                               className="glass-input font-mono text-xs"
+                              aria-label={`Rule ${i + 1} holder token mint address`}
                               value={rule.holderMint || ""}
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
@@ -943,6 +949,7 @@ export default function Home() {
                             />
                             <input
                               className="glass-input font-mono text-xs"
+                              aria-label={`Rule ${i + 1} token to airdrop mint address`}
                               value={rule.targetMint || ""}
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
@@ -950,7 +957,11 @@ export default function Home() {
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
-                              <div className="grid grid-cols-3 gap-1.5">
+                              <div
+                                role="radiogroup"
+                                aria-label={`Rule ${i + 1} airdrop reach mode`}
+                                className="grid grid-cols-3 gap-1.5"
+                              >
                                 {HOLDER_MODES.map((m) => {
                                   const active =
                                     (rule.holderMode || "spam") === m.key;
@@ -958,6 +969,8 @@ export default function Home() {
                                     <button
                                       key={m.key}
                                       type="button"
+                                      role="radio"
+                                      aria-checked={active}
                                       onClick={() =>
                                         updateRule(i, { holderMode: m.key })
                                       }
@@ -992,6 +1005,7 @@ export default function Home() {
                         {rule.type === "buy-burn" && (
                           <input
                             className="glass-input font-mono text-xs"
+                            aria-label={`Rule ${i + 1} buyback and burn token mint address`}
                             value={rule.targetMint || ""}
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
@@ -1002,6 +1016,7 @@ export default function Home() {
                         {rule.type === "send" && (
                           <input
                             className="glass-input font-mono text-xs"
+                            aria-label={`Rule ${i + 1} destination wallet address`}
                             value={rule.targetWallet || ""}
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
@@ -1033,10 +1048,11 @@ export default function Home() {
                 </div>
 
                 <div data-tour="drop-threshold">
-                  <label className="block text-xs text-brand-600 mb-1.5">
+                  <label htmlFor="drop-threshold-input" className="block text-xs text-brand-600 mb-1.5">
                     SOL drop threshold (optional)
                   </label>
                   <input
+                    id="drop-threshold-input"
                     type="number"
                     min="0"
                     step="0.01"
@@ -1120,14 +1136,15 @@ export default function Home() {
                   , then activate below.
                 </p>
                 <div>
-                  <label className="text-xs text-brand-600 mb-1.5 block">
+                  <label htmlFor="pipeline-wallet-code" className="text-xs text-brand-600 mb-1.5 block">
                     Your pipeline wallet (set this as the fee receiver)
                   </label>
                   <div className="flex gap-2" aria-live="polite">
-                    <code className="glass-input font-mono text-xs flex-1 break-all py-2">
+                    <code id="pipeline-wallet-code" className="glass-input font-mono text-xs flex-1 break-all py-2">
                       {deployResult.walletPublicKey}
                     </code>
                     <button
+                      aria-label="Copy pipeline wallet address"
                       className={`btn-secondary shrink-0 text-xs ${walletCopied ? "is-copied" : ""}`}
                       onClick={() => doCopyWallet(deployResult.walletPublicKey)}
                     >
