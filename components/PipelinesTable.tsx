@@ -204,15 +204,6 @@ export default function PipelinesTable() {
       </div>
 
       {/* Tabs */}
-<<<<<<< HEAD
-      <div className="flex items-center gap-1.5 overflow-x-auto" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            aria-controls="filtered-pipes"
-=======
       <div
         role="tablist"
         aria-label="Pipelines filtering tabs"
@@ -226,7 +217,6 @@ export default function PipelinesTable() {
             aria-selected={tab === t.key}
             aria-controls="pipes-tabpanel"
             onKeyDown={(e) => handleKeyDown(e, i)}
->>>>>>> origin/main
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
               tab === t.key
@@ -240,23 +230,6 @@ export default function PipelinesTable() {
       </div>
 
       {/* Carousel — one token card per pipe */}
-<<<<<<< HEAD
-      {!loaded ? (
-        <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
-      ) : filtered.length === 0 ? (
-        <div className="glass-card py-12 text-center" id="filtered-pipes">
-          <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
-          <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
-          <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1" id="filtered-pipes">
-          {filtered.map((p) => (
-            <TokenCard key={p.id} p={p} />
-          ))}
-        </div>
-      )}
-=======
       <div role="tabpanel" id="pipes-tabpanel" aria-labelledby={`tab-${tab}`}>
         {!loaded ? (
           <div className="glass-card py-10 text-center text-brand-700 text-xs">
@@ -282,7 +255,6 @@ export default function PipelinesTable() {
           </div>
         )}
       </div>
->>>>>>> origin/main
     </div>
   );
 }

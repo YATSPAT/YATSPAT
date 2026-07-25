@@ -99,7 +99,7 @@ function Logo({ className = "w-10 h-10" }: { className?: string }) {
 // gambling/pump.fun spirit of the app, distinct from the plain "R" wordmark used elsewhere.
 function CoinLogo({ className = "w-9 h-9" }: { className?: string }) {
   return (
-    <span className={`coin-spin inline-block shrink-0 ${className}`}>
+    <span className={`coin-spin inline-block shrink-0 ${className}`} role="img" aria-label="Wen Stimmy - Animated Logo">
       <span className="coin-spin-inner">
         <span className="coin-face coin-face-front flex items-center justify-center bg-surface-950 text-brand-400 font-black text-base leading-none">
           S
@@ -331,13 +331,9 @@ function TokenDetails() {
         <span className="text-brand-600 text-sm block mb-1">Contract</span>
         {hasMint ? (
           <div className="flex gap-2" aria-live="polite">
-<<<<<<< HEAD
-            <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
-=======
             <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">
               {shortMint(STIMMY.mint)}
             </code>
->>>>>>> origin/main
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
               onClick={doCopy} aria-label={copied ? "Contract address copied" : "Copy contract address"}
@@ -406,18 +402,13 @@ export default function Home() {
   });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validateResult, setValidateResult] = useState<any>(null);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [walletCopied, setWalletCopied] = useState(false);
-  const doCopyWallet = (address: string) => {
-    navigator.clipboard?.writeText(address);
-    setWalletCopied(true);
-    setTimeout(() => setWalletCopied(false), 1200);
-  };
 
   // First-run walkthrough — shows once automatically, then only via the header's "?" button.
   useEffect(() => {
@@ -595,6 +586,14 @@ export default function Home() {
     setDraft({ rules: [{ ...newRule(), pct: 100 }] });
     setDeployResult(null);
     setActivateResult(null);
+    setWalletCopied(false);
+  };
+
+  const doCopyWallet = (address: string) => {
+    if (!address) return;
+    navigator.clipboard?.writeText(address);
+    setWalletCopied(true);
+    setTimeout(() => setWalletCopied(false), 1200);
   };
 
   return (
@@ -618,12 +617,6 @@ export default function Home() {
               </span>
             </a>
             <nav className="flex items-center gap-1 text-sm">
-<<<<<<< HEAD
-              <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
-              <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
-              <a href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</a>
-              <button aria-expanded={menuOpen} aria-controls="token-sidebar" onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
-=======
               <a
                 href="#pipes"
                 className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors"
@@ -650,7 +643,6 @@ export default function Home() {
               >
                 token
               </button>
->>>>>>> origin/main
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -664,15 +656,6 @@ export default function Home() {
             </button>
             {/* Social links (mirrors the sidebar) */}
             <div className="hidden sm:flex items-center gap-1.5">
-<<<<<<< HEAD
-              <a href={STIMMY.x} target="_blank" rel="noopener noreferrer" title="X / Twitter" aria-label="X (formerly Twitter)" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors">
-                𝕏
-              </a>
-              <a href={`https://pump.fun/coin/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Pump.fun" aria-label="Pump.fun" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
-                <PumpIcon className="w-5 h-5" />
-              </a>
-              <a href={`https://solscan.io/token/${STIMMY.mint}`} target="_blank" rel="noopener noreferrer" title="Explorer" aria-label="Solana Explorer" className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors">
-=======
               <a
                 href={STIMMY.x}
                 target="_blank"
@@ -701,7 +684,6 @@ export default function Home() {
                 aria-label="View our token on Solana Explorer"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
->>>>>>> origin/main
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
@@ -744,12 +726,8 @@ export default function Home() {
         className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMenuOpen(false)}
       />
-<<<<<<< HEAD
-      <aside id="token-sidebar"
-=======
       <aside
         id="sidebar-menu"
->>>>>>> origin/main
         className={`fixed top-0 left-0 z-[70] h-full w-80 max-w-[85vw] transform transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="h-full glass-card rounded-none overflow-y-auto p-5 space-y-5">
@@ -953,7 +931,6 @@ export default function Home() {
                                 ),
                               })
                             }
-                            aria-label={`Rule ${i + 1} Percentage Allocation`}
                             className="flex-1"
                             style={{
                               background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)`,
@@ -973,7 +950,6 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
-                              aria-label={`Rule ${i + 1} Airdrop Holder Token Mint`}
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
@@ -983,7 +959,6 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
-                              aria-label={`Rule ${i + 1} Token to Airdrop`}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
@@ -1041,7 +1016,6 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
-                            aria-label={`Rule ${i + 1} Buy Back and Burn Token Mint`}
                             placeholder="Token mint to buy back & burn…"
                           />
                         )}
@@ -1053,7 +1027,6 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
-                            aria-label={`Rule ${i + 1} Destination Wallet Address`}
                             placeholder="Destination wallet address…"
                           />
                         )}
@@ -1135,8 +1108,50 @@ export default function Home() {
                 >
                   {deploying ? "Creating…" : "> Create pipeline"}
                 </button>
+
+                {/* Mobile-only validation summary and trigger */}
+                {mintOk && rulesOk && (
+                  <div className="lg:hidden p-4 rounded-none border border-brand-900 bg-surface-900/60 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-brand-300">Configuration HUD (Mobile)</span>
+                      <span className={`text-[10px] uppercase font-bold ${validated ? "text-brand-400" : "text-brand-600"}`}>
+                        {validated ? "✓ Validated" : "Pending validation"}
+                      </span>
+                    </div>
+
+                    {!validated && (
+                      <>
+                        <p className="text-xs text-brand-700">
+                          Review and validate your pipeline configuration to enable the create button.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={validate}
+                          disabled={validating}
+                          className="btn-secondary w-full text-xs font-bold py-2"
+                        >
+                          {validating ? "VALIDATING…" : "VALIDATE CONFIGURATION"}
+                        </button>
+                      </>
+                    )}
+
+                    {validateResult && (
+                      <div className={`p-2.5 border text-[11px] leading-relaxed ${validateResult.ok ? "border-brand-500/30 bg-brand-500/10 text-brand-300" : "border-brand-600/30 bg-brand-600/10 text-brand-600"}`}>
+                        {validateResult.ok ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-brand-400">✓</span>
+                            <span>Configuration confirmed. Ready to deploy.</span>
+                          </div>
+                        ) : (
+                          <p>{validateResult.error}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {mintOk && rulesOk && !validated && (
-                  <p className="text-xs text-brand-300 -mt-3">
+                  <p className="text-xs text-brand-300 -mt-3 hidden lg:block">
                     Press VALIDATE in the Configuration HUD to review the exact
                     workflow and unlock this.
                   </p>
@@ -1169,14 +1184,6 @@ export default function Home() {
                   , then activate below.
                 </p>
                 <div>
-<<<<<<< HEAD
-                  <label className="text-xs text-brand-600 mb-1.5 block">Your pipeline wallet (set this as the fee receiver)</label>
-                  <div className="flex gap-2" aria-live="polite">
-                    <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
-                    <button
-                      className="btn-secondary shrink-0 text-xs"
-                      aria-label="Copy pipeline wallet address" onClick={() => navigator.clipboard?.writeText(deployResult.walletPublicKey)}
-=======
                   <label className="text-xs text-brand-600 mb-1.5 block">
                     Your pipeline wallet (set this as the fee receiver)
                   </label>
@@ -1185,9 +1192,9 @@ export default function Home() {
                       {deployResult.walletPublicKey}
                     </code>
                     <button
-                      className={`btn-secondary shrink-0 text-xs ${walletCopied ? "is-copied" : ""}`}
+                      className={`copy-action btn-secondary shrink-0 text-xs py-2 px-3 ${walletCopied ? "is-copied" : ""}`}
+                      aria-label={walletCopied ? "Pipeline wallet address copied" : "Copy pipeline wallet address"}
                       onClick={() => doCopyWallet(deployResult.walletPublicKey)}
->>>>>>> origin/main
                     >
                       {walletCopied ? "Copied" : "Copy"}
                     </button>
@@ -1410,7 +1417,7 @@ export default function Home() {
                   data-tour="validate-button"
                   onClick={validate}
                   disabled={validating}
-                  className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
+                  className={`btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50 ${mintOk && rulesOk && !validated ? "contract-pulse" : ""}`}
                 >
                   {validating ? "VALIDATING…" : "VALIDATE"}
                 </button>
