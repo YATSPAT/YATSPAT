@@ -331,9 +331,13 @@ function TokenDetails() {
         <span className="text-brand-600 text-sm block mb-1">Contract</span>
         {hasMint ? (
           <div className="flex gap-2" aria-live="polite">
+<<<<<<< HEAD
+            <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">{shortMint(STIMMY.mint)}</code>
+=======
             <code className="contract-pulse glass-input font-mono text-sm flex-1 break-all py-1.5">
               {shortMint(STIMMY.mint)}
             </code>
+>>>>>>> origin/main
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
               onClick={doCopy}
@@ -402,6 +406,7 @@ export default function Home() {
   });
   const [deploying, setDeploying] = useState(false);
   const [deployResult, setDeployResult] = useState<any>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [activating, setActivating] = useState(false);
   const [activateResult, setActivateResult] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -614,6 +619,12 @@ export default function Home() {
               </span>
             </a>
             <nav className="flex items-center gap-1 text-sm">
+<<<<<<< HEAD
+              <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
+              <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
+              <Link href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</Link>
+              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
+=======
               <a
                 href="#pipes"
                 className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors"
@@ -640,6 +651,7 @@ export default function Home() {
               >
                 token
               </button>
+>>>>>>> origin/main
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -681,6 +693,18 @@ export default function Home() {
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
+<<<<<<< HEAD
+            <WalletMultiButton style={{ background: connected ? "#116611" : "#000000", border: "1px solid #33ff33", color: "#33ff33", borderRadius: "0", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
+            {connected && (signedIn ? (
+              <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all">
+                <span className="w-2 h-2 rounded-none bg-brand-400 animate-pulse" aria-hidden="true" /> SIWS ✓
+              </button>
+            ) : (
+              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50">
+                {signing ? "Signing…" : "Sign In With Solana"}
+              </button>
+            ))}
+=======
             <WalletMultiButton
               style={{
                 background: connected ? "#116611" : "#000000",
@@ -711,6 +735,7 @@ export default function Home() {
                   {signing ? "Signing…" : "Sign In With Solana"}
                 </button>
               ))}
+>>>>>>> origin/main
           </div>
         </div>
       </header>
@@ -1136,6 +1161,18 @@ export default function Home() {
                   , then activate below.
                 </p>
                 <div>
+<<<<<<< HEAD
+                  <label className="text-xs text-brand-600 mb-1.5 block">Your pipeline wallet (set this as the fee receiver)</label>
+                  <div className="flex gap-2" aria-live="polite">
+                    <code className="glass-input font-mono text-xs flex-1 break-all py-2">{deployResult.walletPublicKey}</code>
+                    <button
+                      className={`btn-secondary shrink-0 text-xs ${walletCopied ? "bg-brand-400 !text-black border-brand-400" : ""}`}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(deployResult.walletPublicKey);
+                        setWalletCopied(true);
+                        setTimeout(() => setWalletCopied(false), 1200);
+                      }}
+=======
                   <label className="text-xs text-brand-600 mb-1.5 block">
                     Your pipeline wallet (set this as the fee receiver)
                   </label>
@@ -1146,6 +1183,7 @@ export default function Home() {
                     <button
                       className={`btn-secondary shrink-0 text-xs ${walletCopied ? "is-copied" : ""}`}
                       onClick={() => doCopyWallet(deployResult.walletPublicKey)}
+>>>>>>> origin/main
                     >
                       {walletCopied ? "Copied" : "Copy"}
                     </button>

@@ -72,6 +72,10 @@ export default function LiveStatsStrip() {
     <div className="w-full border-y border-brand-700 bg-surface-950">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-center gap-y-2 font-mono">
         <span className="flex items-center gap-1.5 pr-4 sm:pr-6 mr-4 sm:mr-6 border-r border-brand-900">
+<<<<<<< HEAD
+          <span className="w-1.5 h-1.5 bg-brand-400 animate-pulse shrink-0" aria-hidden="true" />
+          <span className="text-[10px] uppercase tracking-wider text-brand-400 font-bold">Live</span>
+=======
           <span
             aria-hidden="true"
             className="w-1.5 h-1.5 bg-brand-400 animate-pulse shrink-0"
@@ -79,6 +83,7 @@ export default function LiveStatsStrip() {
           <span className="text-[10px] uppercase tracking-wider text-brand-400 font-bold">
             Live
           </span>
+>>>>>>> origin/main
         </span>
         {stats.map((s, i) => (
           <span
