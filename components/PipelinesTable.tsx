@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useEffect, useRef, useState } from "react";
+=======
+import React, { useEffect, useState } from "react";
+>>>>>>> origin/main
 
 interface PublicRule {
   type: string;
@@ -41,13 +45,35 @@ const TABS: { key: Tab; label: string }[] = [
 function StatusBadge({ status }: { status: string | null }) {
   const map =
     status === "success"
-      ? { cls: "bg-brand-500/15 border-brand-500/30 text-brand-300", dot: "bg-brand-400", label: "live" }
+      ? {
+          cls: "bg-brand-500/15 border-brand-500/30 text-brand-300",
+          dot: "bg-brand-400",
+          label: "live",
+        }
       : status === "error"
-      ? { cls: "bg-brand-600/15 border-brand-600/30 text-brand-600", dot: "bg-brand-600", label: "attention" }
-      : { cls: "bg-brand-500/15 border-brand-400/30 text-brand-300", dot: "bg-brand-400", label: "new" };
+        ? {
+            cls: "bg-brand-600/15 border-brand-600/30 text-brand-600",
+            dot: "bg-brand-600",
+            label: "attention",
+          }
+        : {
+            cls: "bg-brand-500/15 border-brand-400/30 text-brand-300",
+            dot: "bg-brand-400",
+            label: "new",
+          };
   return (
+<<<<<<< HEAD
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}>
       <span className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`} aria-hidden="true" />
+=======
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`}
+      />
+>>>>>>> origin/main
       {map.label}
     </span>
   );
@@ -92,14 +118,20 @@ function TokenCard({ p }: { p: PublicPipeline }) {
           </div>
         )}
         <div className="min-w-0">
-          <div className="text-sm font-bold text-brand-300 truncate">{ticker}</div>
+          <div className="text-sm font-bold text-brand-300 truncate">
+            {ticker}
+          </div>
           <StatusBadge status={p.lastRunStatus} />
         </div>
       </div>
 
       <div className="mt-3 pt-3 border-t border-brand-900">
-        <div className="text-[10px] uppercase tracking-wider text-brand-700">SOL sent out</div>
-        <div className="text-lg font-bold text-brand-300 font-mono leading-tight">◎ {fmtSol(outSol)}</div>
+        <div className="text-[10px] uppercase tracking-wider text-brand-700">
+          SOL sent out
+        </div>
+        <div className="text-lg font-bold text-brand-300 font-mono leading-tight">
+          ◎ {fmtSol(outSol)}
+        </div>
       </div>
     </a>
   );
@@ -110,6 +142,28 @@ export default function PipelinesTable() {
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
   const tabListRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let newIndex = index;
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      newIndex = (index + 1) % TABS.length;
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      newIndex = (index - 1 + TABS.length) % TABS.length;
+    } else {
+      return;
+    }
+    const nextTab = TABS[newIndex].key;
+    setTab(nextTab);
+    setTimeout(() => {
+      const btn = document.getElementById(`tab-${nextTab}`);
+      btn?.focus();
+    }, 0);
+  };
 
   useEffect(() => {
     let alive = true;
@@ -151,7 +205,9 @@ export default function PipelinesTable() {
           { label: "target tokens", value: String(targets) },
         ].map((s) => (
           <div key={s.label} className="glass-card p-4">
-            <div className="text-2xl font-bold text-brand-300 font-mono">{s.value}</div>
+            <div className="text-2xl font-bold text-brand-300 font-mono">
+              {s.value}
+            </div>
             <div className="text-[11px] text-brand-600 mt-0.5">{s.label}</div>
           </div>
         ))}
@@ -159,6 +215,7 @@ export default function PipelinesTable() {
 
       {/* Tabs */}
       <div
+<<<<<<< HEAD
         ref={tabListRef}
         role="tablist"
         aria-label="Pipeline filters"
@@ -179,16 +236,33 @@ export default function PipelinesTable() {
         }}
       >
         {TABS.map((t) => (
+=======
+        role="tablist"
+        aria-label="Pipelines filtering tabs"
+        className="flex items-center gap-1.5 overflow-x-auto"
+      >
+        {TABS.map((t, i) => (
+>>>>>>> origin/main
           <button
             key={t.key}
             id={`tab-${t.key}`}
             role="tab"
             aria-selected={tab === t.key}
+<<<<<<< HEAD
             aria-controls="pipeline-panel"
             tabIndex={tab === t.key ? 0 : -1}
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950 ${
               tab === t.key ? "bg-brand-500/20 border border-brand-400/40 text-brand-200" : "text-brand-600 hover:text-brand-300"
+=======
+            aria-controls="pipes-tabpanel"
+            onKeyDown={(e) => handleKeyDown(e, i)}
+            onClick={() => setTab(t.key)}
+            className={`px-3 py-1.5 rounded-none text-xs font-medium whitespace-nowrap transition-colors ${
+              tab === t.key
+                ? "bg-brand-500/20 border border-brand-400/40 text-brand-200"
+                : "text-brand-600 hover:text-brand-300"
+>>>>>>> origin/main
             }`}
           >
             {t.label}
@@ -197,6 +271,7 @@ export default function PipelinesTable() {
       </div>
 
       {/* Carousel — one token card per pipe */}
+<<<<<<< HEAD
       <div id="pipeline-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {!loaded ? (
           <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
@@ -205,6 +280,24 @@ export default function PipelinesTable() {
             <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
             <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
             <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
+=======
+      <div role="tabpanel" id="pipes-tabpanel" aria-labelledby={`tab-${tab}`}>
+        {!loaded ? (
+          <div className="glass-card py-10 text-center text-brand-700 text-xs">
+            Loading…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="glass-card py-12 text-center">
+            <div className="text-lg mb-2 opacity-60 tracking-widest">
+              [ EMPTY ]
+            </div>
+            <p className="text-xs text-brand-600 font-medium">
+              No pipes here yet
+            </p>
+            <p className="text-[11px] text-brand-700 mt-1">
+              Build the first one below.
+            </p>
+>>>>>>> origin/main
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
