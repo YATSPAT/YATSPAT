@@ -336,7 +336,7 @@ function TokenDetails() {
             </code>
             <button
               className={`copy-action btn-secondary text-sm shrink-0 py-1.5 px-3 ${copied ? "is-copied" : ""}`}
-              onClick={doCopy}
+              onClick={doCopy} aria-label={copied ? "Contract address copied" : "Copy contract address"}
             >
               {copied ? "Copied" : "Copy"}
             </button>
@@ -723,6 +723,9 @@ export default function Home() {
         className={`fixed inset-0 z-[60] bg-black/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMenuOpen(false)}
       />
+<<<<<<< HEAD
+      <aside id="token-sidebar"
+=======
       <aside
         id="sidebar-menu"
         className={`fixed top-0 left-0 z-[70] h-full w-80 max-w-[85vw] transform transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
