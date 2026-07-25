@@ -829,11 +829,11 @@ export default function Home() {
               >
                 {/* Token */}
                 <div>
-                  <label htmlFor="feeMint" className="block text-sm font-semibold text-brand-300 mb-1.5">
+                  <label htmlFor="token-mint" className="block text-sm font-semibold text-brand-300 mb-1.5">
                     Your token
                   </label>
                   <input
-                    id="feeMint"
+                    id="token-mint"
                     className="glass-input font-mono text-sm"
                     value={draft.feeMint || ""}
                     onChange={(e) =>
@@ -869,7 +869,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <select
-                              aria-label={`Rule ${i + 1} action type`}
+                              aria-label={`Action type for rule ${i + 1}`}
                               className="glass-input text-sm !py-2 !pr-10 appearance-none w-full !border-brand-400/50 focus:!border-brand-400/80"
                               value={rule.type}
                               onChange={(e) =>
@@ -916,6 +916,7 @@ export default function Home() {
                             min={0}
                             max={100}
                             value={rule.pct}
+                            aria-label={`Percentage share for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, {
                                 pct: Math.max(
@@ -924,7 +925,6 @@ export default function Home() {
                                 ),
                               })
                             }
-                            aria-label={`Rule ${i + 1} percentage allocation`}
                             className="flex-1"
                             style={{
                               background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)`,
@@ -940,23 +940,27 @@ export default function Home() {
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
+                              aria-label={`Holder token mint address for rule ${i + 1}`}
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
-                              aria-label={`Rule ${i + 1} holder token mint to drop to`}
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
+                              aria-label={`Token to airdrop mint address for rule ${i + 1}`}
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
-                              aria-label={`Rule ${i + 1} token mint to distribute`}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
-                              <div className="grid grid-cols-3 gap-1.5">
+                              <div
+                                role="radiogroup"
+                                aria-label={`Holder reach mode for rule ${i + 1}`}
+                                className="grid grid-cols-3 gap-1.5"
+                              >
                                 {HOLDER_MODES.map((m) => {
                                   const active =
                                     (rule.holderMode || "spam") === m.key;
@@ -964,6 +968,8 @@ export default function Home() {
                                     <button
                                       key={m.key}
                                       type="button"
+                                      role="radio"
+                                      aria-checked={active}
                                       onClick={() =>
                                         updateRule(i, { holderMode: m.key })
                                       }
@@ -1000,10 +1006,10 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
+                            aria-label={`Token to buy back and burn mint address for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
-                            aria-label={`Rule ${i + 1} token mint to buy back and burn`}
                             placeholder="Token mint to buy back & burn…"
                           />
                         )}
@@ -1011,10 +1017,10 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
+                            aria-label={`Destination wallet address for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
-                            aria-label={`Rule ${i + 1} destination wallet address`}
                             placeholder="Destination wallet address…"
                           />
                         )}
