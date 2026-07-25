@@ -614,6 +614,12 @@ export default function Home() {
               </span>
             </a>
             <nav className="flex items-center gap-1 text-sm">
+<<<<<<< HEAD
+              <a href="#pipes" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">pipes</a>
+              <a href="#create" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">create</a>
+              <Link href="/docs" className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">docs</Link>
+              <button onClick={() => setMenuOpen(true)} className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors">token</button>
+=======
               <a
                 href="#pipes"
                 className="px-2.5 py-1.5 rounded-none text-brand-300 hover:text-brand-200 hover:bg-brand-950 transition-colors"
@@ -640,6 +646,7 @@ export default function Home() {
               >
                 token
               </button>
+>>>>>>> origin/main
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -681,6 +688,22 @@ export default function Home() {
                 <ScanIcon className="w-5 h-5" />
               </a>
             </div>
+<<<<<<< HEAD
+            <WalletMultiButton style={{ background: connected ? "#116611" : "#000000", border: "1px solid #33ff33", color: "#33ff33", borderRadius: "0", height: "2.5rem", fontSize: "0.8rem", padding: "0 0.85rem", whiteSpace: "nowrap" }} />
+            {connected && (signedIn ? (
+              <button onClick={signOut} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all">
+                <span
+                  aria-hidden="true"
+                  className="w-2 h-2 rounded-none bg-brand-400 animate-pulse"
+                />{" "}
+                SIWS ✓
+              </button>
+            ) : (
+              <button onClick={signIn} disabled={signing} className="flex items-center gap-2 px-3 py-1.5 rounded-none bg-brand-500/15 border border-brand-400/30 text-brand-300 text-xs font-medium hover:bg-brand-500/25 transition-all disabled:opacity-50">
+                {signing ? "Signing…" : "Sign In With Solana"}
+              </button>
+            ))}
+=======
             <WalletMultiButton
               style={{
                 background: connected ? "#116611" : "#000000",
@@ -711,6 +734,7 @@ export default function Home() {
                   {signing ? "Signing…" : "Sign In With Solana"}
                 </button>
               ))}
+>>>>>>> origin/main
           </div>
         </div>
       </header>
