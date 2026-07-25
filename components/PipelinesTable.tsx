@@ -58,9 +58,7 @@ function StatusBadge({ status }: { status: string | null }) {
             label: "new",
           };
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none border text-[10px] font-medium ${map.cls}`}>
       <span
         aria-hidden="true"
         className={`w-1.5 h-1.5 rounded-none ${map.dot} animate-pulse`}
@@ -153,6 +151,28 @@ export default function PipelinesTable() {
     }
   };
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let newIndex = index;
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      newIndex = (index + 1) % TABS.length;
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      newIndex = (index - 1 + TABS.length) % TABS.length;
+    } else {
+      return;
+    }
+    const nextTab = TABS[newIndex].key;
+    setTab(nextTab);
+    setTimeout(() => {
+      const btn = document.getElementById(`tab-${nextTab}`);
+      btn?.focus();
+    }, 0);
+  };
+
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -202,18 +222,14 @@ export default function PipelinesTable() {
       </div>
 
       {/* Tabs */}
-      <div
-        role="tablist"
-        aria-label="Pipelines filtering tabs"
-        className="flex items-center gap-1.5 overflow-x-auto"
-      >
+      <div className="flex items-center gap-1.5 overflow-x-auto" role="tablist" aria-label="Filter pipelines">
         {TABS.map((t, i) => (
           <button
             key={t.key}
             id={`tab-${t.key}`}
             role="tab"
             aria-selected={tab === t.key}
-            aria-controls="pipes-tabpanel"
+            aria-controls={`panel-${t.key}`}
             tabIndex={tab === t.key ? 0 : -1}
             ref={(el) => {
               tabRefs.current[t.key] = el;
@@ -232,22 +248,19 @@ export default function PipelinesTable() {
       </div>
 
       {/* Carousel — one token card per pipe */}
-      <div role="tabpanel" id="pipes-tabpanel" aria-labelledby={`tab-${tab}`} className="outline-none">
+      <div
+        id={`panel-${tab}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+        className="outline-none"
+      >
         {!loaded ? (
-          <div className="glass-card py-10 text-center text-brand-700 text-xs">
-            Loading…
-          </div>
+          <div className="glass-card py-10 text-center text-brand-700 text-xs">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="glass-card py-12 text-center">
-            <div className="text-lg mb-2 opacity-60 tracking-widest">
-              [ EMPTY ]
-            </div>
-            <p className="text-xs text-brand-600 font-medium">
-              No pipes here yet
-            </p>
-            <p className="text-[11px] text-brand-700 mt-1">
-              Build the first one below.
-            </p>
+            <div className="text-lg mb-2 opacity-60 tracking-widest">[ EMPTY ]</div>
+            <p className="text-xs text-brand-600 font-medium">No pipes here yet</p>
+            <p className="text-[11px] text-brand-700 mt-1">Build the first one below.</p>
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">

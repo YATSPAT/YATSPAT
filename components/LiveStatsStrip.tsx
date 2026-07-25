@@ -76,9 +76,7 @@ export default function LiveStatsStrip() {
             aria-hidden="true"
             className="w-1.5 h-1.5 bg-brand-400 animate-pulse shrink-0"
           />
-          <span className="text-[10px] uppercase tracking-wider text-brand-400 font-bold">
-            Live
-          </span>
+          <span className="text-[10px] uppercase tracking-wider text-brand-400 font-bold">Live</span>
         </span>
         {stats.map((s, i) => (
           <span
