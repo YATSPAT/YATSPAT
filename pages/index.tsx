@@ -658,6 +658,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="X / Twitter"
+                aria-label="Visit our X / Twitter page"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 text-brand-300 text-sm hover:text-brand-200 transition-colors"
               >
                 𝕏
@@ -667,6 +668,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Pump.fun"
+                aria-label="View our token on Pump.fun"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <PumpIcon className="w-5 h-5" />
@@ -676,6 +678,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Explorer"
+                aria-label="View our token on Solana Explorer"
                 className="w-9 h-9 flex items-center justify-center rounded-none bg-surface-700 border border-brand-900 hover:bg-surface-600 transition-colors"
               >
                 <ScanIcon className="w-5 h-5" />
@@ -925,6 +928,7 @@ export default function Home() {
                                 ),
                               })
                             }
+                            aria-label={`Rule ${i + 1} Percentage Allocation`}
                             className="flex-1"
                             style={{
                               background: `linear-gradient(to right, #33ff33 ${rule.pct}%, #0d0d0d ${rule.pct}%)`,
@@ -944,6 +948,7 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
+                              aria-label={`Rule ${i + 1} Airdrop Holder Token Mint`}
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
@@ -953,6 +958,7 @@ export default function Home() {
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
+                              aria-label={`Rule ${i + 1} Token to Airdrop`}
                               placeholder="Token to airdrop (usually your own mint)…"
                             />
                             <div data-tour="holder-modes">
@@ -1010,6 +1016,7 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
+                            aria-label={`Rule ${i + 1} Buy Back and Burn Token Mint`}
                             placeholder="Token mint to buy back & burn…"
                           />
                         )}
@@ -1021,6 +1028,7 @@ export default function Home() {
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
+                            aria-label={`Rule ${i + 1} Destination Wallet Address`}
                             placeholder="Destination wallet address…"
                           />
                         )}
