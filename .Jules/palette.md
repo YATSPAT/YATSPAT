@@ -1,3 +1,7 @@
+## 2024-07-07 - Improved form accessibility in rule builder
+**Learning:** Found multiple form inputs (range sliders, text inputs for mint addresses) in `pages/index.tsx` relying solely on placeholder text or adjacent span tags without explicit `aria-label` or `<label>` `htmlFor` association, making them inaccessible to screen readers.
+**Action:** Always verify that input fields have either a correctly associated `<label>` using `htmlFor`/`id` or an explicit `aria-label` attribute to describe their purpose. Do not rely exclusively on placeholders.
+
 ## 2025-05-14 - [Tutorial Accessibility & Keyboard Navigation]
 **Learning:** In a terminal-themed UI, users expect high keyboard interactivity. Custom modal-like components (like our spotlight tutorial) must strictly follow WAI-ARIA dialog patterns (role="dialog", aria-modal="true") and support standard keyboard shortcuts (Escape, Arrows) to feel "natural" rather than just a visual overlay.
 **Action:** Always ensure modal overlays have a keyboard listener for navigation/closing and that progress indicators are interactive buttons with appropriate ARIA labels, not just decorative spans.
