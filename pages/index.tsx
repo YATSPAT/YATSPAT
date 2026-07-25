@@ -902,7 +902,7 @@ export default function Home() {
                             <button
                               type="button"
                               onClick={() => removeRule(i)}
-                              aria-label={`Remove rule ${i + 1}`}
+                              aria-label={`Remove rule ${i + 1} (${RULE_LABEL[rule.type] || rule.type})`}
                               className="text-xs text-brand-600 hover:text-brand-600 px-2 shrink-0"
                             >
                               Remove
@@ -973,6 +973,7 @@ export default function Home() {
                                       onClick={() =>
                                         updateRule(i, { holderMode: m.key })
                                       }
+                                      aria-label={`Rule ${i + 1} reach mode: ${m.label} (${m.hint})`}
                                       className={`px-2 py-1.5 rounded-none border text-center transition-colors ${
                                         active
                                           ? "bg-brand-500/20 border-brand-400/50 text-brand-100"
