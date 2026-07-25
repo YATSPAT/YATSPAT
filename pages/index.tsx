@@ -941,7 +941,6 @@ export default function Home() {
                         {rule.type === "distribute" && (
                           <>
                             <input
-                              aria-label={`Rule ${i + 1} - Holder token mint address to airdrop to`}
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
                               aria-label={`Holder token mint address for rule ${i + 1}`}
@@ -951,7 +950,6 @@ export default function Home() {
                               placeholder="Airdrop to holders of this token mint…"
                             />
                             <input
-                              aria-label={`Rule ${i + 1} - Token mint address to distribute`}
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
                               aria-label={`Token to airdrop mint address for rule ${i + 1}`}
@@ -1009,7 +1007,6 @@ export default function Home() {
                         )}
                         {rule.type === "buy-burn" && (
                           <input
-                            aria-label={`Rule ${i + 1} - Token mint address to buy back and burn`}
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
                             aria-label={`Token to buy back and burn mint address for rule ${i + 1}`}
@@ -1021,7 +1018,6 @@ export default function Home() {
                         )}
                         {rule.type === "send" && (
                           <input
-                            aria-label={`Rule ${i + 1} - Destination wallet address to send SOL to`}
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
                             aria-label={`Destination wallet address for rule ${i + 1}`}
