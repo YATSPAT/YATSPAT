@@ -5,3 +5,7 @@
 ## 2025-05-15 - [Accessible Tabs & Unified Feedback]
 **Learning:** In a high-utility dashboard, tabbed navigation must follow WAI-ARIA patterns (roles, keyboard arrow nav) to ensure screen reader users can filter views efficiently. Additionally, interactive feedback for copy actions should be unified; use `aria-live="polite"` on the container to ensure "Copied" status is announced, especially when the visual change is brief.
 **Action:** Use a reusable WAI-ARIA tab pattern for all list filtering and ensure all clipboard interactions have a standard 1.2s "Copied" state with a live region.
+
+## 2026-07-17 - [Custom Tabs WAI-ARIA Compliance & Dynamic Copy Announcement]
+**Learning:** Custom interactive elements like filtering tabs require explicit `role="tablist"`, `role="tab"`, and `role="tabpanel"` structures paired with standard left/right arrow keyboard event listeners to be navigable by screen-reader and keyboard-only users. Additionally, dynamic updates like clipboard copy feedback must utilize `aria-live="polite"` containers so screen readers can announce state changes immediately.
+**Action:** When building interactive tab headers or transient status feedback elements, always integrate full keyboard listeners with `e.preventDefault()`, programmatic focus, and live announcement zones.
