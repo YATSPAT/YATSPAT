@@ -919,7 +919,6 @@ export default function Home() {
                             min={0}
                             max={100}
                             value={rule.pct}
-                            aria-label={`Percentage share for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, {
                                 pct: Math.max(
@@ -943,7 +942,6 @@ export default function Home() {
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.holderMint || ""}
-                              aria-label={`Holder token mint address for rule ${i + 1}`}
                               onChange={(e) =>
                                 updateRule(i, { holderMint: e.target.value })
                               }
@@ -952,7 +950,6 @@ export default function Home() {
                             <input
                               className="glass-input font-mono text-xs"
                               value={rule.targetMint || ""}
-                              aria-label={`Token to airdrop mint address for rule ${i + 1}`}
                               onChange={(e) =>
                                 updateRule(i, { targetMint: e.target.value })
                               }
@@ -1009,7 +1006,6 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetMint || ""}
-                            aria-label={`Token to buy back and burn mint address for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, { targetMint: e.target.value })
                             }
@@ -1020,7 +1016,6 @@ export default function Home() {
                           <input
                             className="glass-input font-mono text-xs"
                             value={rule.targetWallet || ""}
-                            aria-label={`Destination wallet address for rule ${i + 1}`}
                             onChange={(e) =>
                               updateRule(i, { targetWallet: e.target.value })
                             }
@@ -1097,6 +1092,43 @@ export default function Home() {
                   )}
                 </div>
 
+                <div className="lg:hidden space-y-3">
+                  <button
+                    type="button"
+                    onClick={validate}
+                    disabled={validating}
+                    className="btn-secondary w-full text-xs font-bold tracking-wider py-2 disabled:opacity-50"
+                  >
+                    {validating ? "VALIDATING…" : "VALIDATE CONFIGURATION"}
+                  </button>
+                  {validateResult && (
+                    <div
+                      className={`px-2.5 py-2 border text-[11px] leading-relaxed ${
+                        validateResult.ok
+                          ? "border-brand-500/30 bg-brand-500/10 text-brand-300"
+                          : "border-brand-600/30 bg-brand-600/10 text-brand-600"
+                      }`}
+                    >
+                      {validateResult.ok ? (
+                        <>
+                          <p className="font-semibold">
+                            Workflow valid. This pipeline will:
+                          </p>
+                          <ul className="mt-1 ml-3 space-y-1 text-emerald-200">
+                            {(validateResult.rules as ValidatedRule[]).map(
+                              (r, i) => (
+                                <li key={i}>· {describeRule(r, tokenInfo)}</li>
+                              ),
+                            )}
+                          </ul>
+                        </>
+                      ) : (
+                        <p>{validateResult.error}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   data-tour="create-button"
                   className="btn-deploy w-full"
@@ -1107,8 +1139,11 @@ export default function Home() {
                 </button>
                 {mintOk && rulesOk && !validated && (
                   <p className="text-xs text-brand-300 -mt-3">
-                    Press VALIDATE in the Configuration HUD to review the exact
-                    workflow and unlock this.
+                    Press VALIDATE{" "}
+                    <span className="hidden lg:inline">
+                      in the Configuration HUD
+                    </span>{" "}
+                    to review the exact workflow and unlock this.
                   </p>
                 )}
                 {deployResult && !deployResult.ok && (
